@@ -1,0 +1,13 @@
+{
+  "extends": "@novilearn/config/typescript/react-native.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@novilearn/*": ["../../packages/*/src"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", "expo-env.d.ts", "nativewind-env.d.ts"],
+  "exclude": ["node_modules"]
+}

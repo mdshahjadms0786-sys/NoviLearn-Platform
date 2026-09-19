@@ -1,0 +1,1 @@
+module.exports = require('@novilearn/config/eslint/next.js');
