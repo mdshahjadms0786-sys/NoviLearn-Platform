@@ -15,6 +15,7 @@ import { config } from "./config";
 import { AppError } from "./errors";
 import { aiRouter } from "./routes/ai.routes";
 import { authRouter } from "./routes/auth.routes";
+import { practiceRouter } from "./routes/practice.routes";
 
 function isDuplicateEmailError(err: unknown): boolean {
   return (
@@ -68,6 +69,7 @@ app.get("/health", (_req: Request, res: Response) => {
 
 app.use("/auth", authRouter);
 app.use("/ai", aiRouter);
+app.use("/practice", practiceRouter);
 
 app.use((_req: Request, res: Response) => {
   const error = createApiError("NOT_FOUND", "Route not found", 404);

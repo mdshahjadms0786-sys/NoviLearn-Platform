@@ -2,7 +2,11 @@ import type { LearningResponse } from "@novilearn/types";
 
 import { config } from "../config";
 import { AppError } from "../errors";
-import type { AiCompletionInput, LanguageModelConfig } from "./ai.types";
+import type {
+  AiCompletionInput,
+  LanguageModelConfig,
+  LanguageModelMessage,
+} from "./ai.types";
 import { normalizeProviderResponse } from "./normalizer";
 import { buildTutorMessages } from "./prompts/system";
 import { createProvider } from "./providers";
@@ -19,9 +23,14 @@ function notConfigured(): AppError {
   );
 }
 
-export async function generateLearningResponse(
-  input: AiCompletionInput,
-): Promise<LearningResponse> {
+export interface ProviderCompletionOptions {
+  messages: LanguageModelMessage;
+  maxTokens?: number;
+}
+
+export async function completeProviderRequest(
+  options: ProviderCompletionOptions,
+): Promise<string> {
   const { ai } = config;
   if (ai.provider === "" || ai.apiKey === "") {
     throw notConfigured();
@@ -33,13 +42,20 @@ export async function generateLearningResponse(
     provider: ai.provider,
     apiKey: ai.apiKey,
     model: ai.model,
-    maxTokens: DEFAULT_MAX_TOKENS,
+    maxTokens: options.maxTokens ?? DEFAULT_MAX_TOKENS,
     temperature: DEFAULT_TEMPERATURE,
     timeoutMs: DEFAULT_TIMEOUT_MS,
   };
 
-  const messages = buildTutorMessages(input.question);
-  const raw = await provider.complete(messages, modelConfig);
+  return provider.complete(options.messages, modelConfig);
+}
+
+export async function generateLearningResponse(
+  input: AiCompletionInput,
+): Promise<LearningResponse> {
+  const raw = await completeProviderRequest({
+    messages: buildTutorMessages(input.question),
+  });
 
   return normalizeProviderResponse(input.question, raw);
 }

@@ -5,6 +5,7 @@ import type { LearningResponse } from "@novilearn/types";
 import { ContinueLearning } from "@/components/ai/continue-learning";
 import { FollowUpQuestions } from "@/components/ai/follow-up-questions";
 import { LearningSection } from "@/components/ai/learning-section";
+import { PracticeCta } from "@/components/ai/practice-cta";
 import { RelatedConcepts } from "@/components/ai/related-concepts";
 import { VisualLearning } from "@/components/ai/visual-learning";
 
@@ -50,6 +51,8 @@ export function LearningExperience({
         response.nextLearning.length > 0 && (
           <ContinueLearning topics={response.nextLearning} />
         )}
+
+      <PracticeCta topic={response.question} />
 
       {followUpSection !== undefined &&
         followUpSection.items !== undefined &&

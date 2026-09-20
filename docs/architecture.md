@@ -37,6 +37,7 @@ NoviLearn/
 - **Auth Revocation**: `tokenVersion` on User — logout increments it and invalidates issued JWTs
 - **Security**: bcrypt hashing (cost 12), generic login errors, in-memory rate limiting
 - **AI Tutor / Learning Experience**: authenticated `POST /ai/learn` → provider abstraction → normalized structured `LearningResponse` (summary, explanation, key points, example, analogy, plus optional visual learning, related concepts, and next topics); provider only configurable via env (`AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`); secrets stay server-side; per-user rate limit + duplicate-guard; stateless (no chat/learning-state persistence)
+- **Practice / Assessment**: authenticated `POST /practice/generate`, `/practice/answer`, `/practice/complete` → ephemeral server-side sessions (in-memory, 60-min TTL, no DB persistence) → AI-generated questions (MCQ, true/false, short answer) → server-side evaluation → session result; correct answers never reach the client before submission; per-user rate limits; idempotent answering
 - **CORS**: Restricted to the web app origin (`WEB_URL`)
 - **Health Check**: `GET /health` endpoint
 
@@ -52,7 +53,8 @@ NoviLearn/
 - **Navigation**: Home, Learn, Practice, Progress, Profile — active state via `usePathname`
 - **Student Home**: `/home` dashboard (welcome, learning entry, quick actions, continue learning, recent activity, recommended) with empty states only
 - **Learn**: `/learn` learning-experience page (question input → staged loading → Learning Experience: question banner, concept summary, key points, examples, analogies, visual learning, related concepts, continue learning, and auto-submitting follow-up questions); prefills from the dashboard with `?q=`
-- **Placeholders**: `/practice`, `/progress` coming-soon pages
+- **Practice**: `/practice` practice session flow (config form → staged loading → per-question answering with instant feedback → results & breakdown); prefills a topic with `?topic=`
+- **Progress**: `/progress` coming-soon page
 - **Profile**: `/account` profile page inside the app shell (account info, learning profile, sign out)
 - **Landing Redirect**: authenticated visitors to `/` are redirected to `/home`
 - **Forms**: React Hook Form + Zod validation
@@ -72,7 +74,8 @@ NoviLearn/
 - **Navigation**: Home, Learn, Practice, Progress, Profile bottom tabs with active state via `usePathname`
 - **Student Home**: `/` dashboard (welcome, learning entry, quick actions, continue learning, recent activity, recommended) with empty states only
 - **Learn**: `/learn` learning-experience screen (question input → staged loading → Learning Experience with concept summary, key points, examples, analogies, visual learning, related concepts, continue learning, and follow-up questions), prefills from the dashboard with `?q=`
-- **Placeholders**: `/practice`, `/progress` coming-soon screens
+- **Practice**: `/practice` practice session screen (config form → staged loading → per-question answering with instant feedback → results & breakdown); prefills a topic with `?topic=`
+- **Progress**: `/progress` coming-soon screen
 - **Profile**: `/account` inside the shell (membership, learning profile, design system, sign out)
 - **Forms**: React Hook Form + Zod validation
 - **Theming**: Light/dark mode with React Native Paper theming
@@ -211,7 +214,7 @@ All app-shell screens are wrapped in the existing `ProtectedRoute`/`RequireAuth`
 
 ### Placeholder Screens
 
-Practice and Progress are first-class routes with a shared `ComingSoon` placeholder so navigation and layout stay functional before their engines arrive.
+Progress is a first-class route with a shared `ComingSoon` placeholder so navigation and layout stay functional before its engine arrives. Practice shipped a full practice engine in Phase 7.
 
 ## AI Tutor (Phase 5)
 
@@ -263,6 +266,65 @@ The normalized `LearningResponse` contains fixed-titled sections in order: Learn
 ### Client Rendering
 
 Web and mobile render responses without `dangerouslySetInnerHTML`. A tiny markdown-lite renderer supports `**bold**`, `` `code` ``, and `-`/`1.` lists (web: JSX; mobile: nested `Text`). Both apps treat the conversation as stateless — no chat history is stored.
+
+## Practice & Assessment (Phase 7)
+
+A practice session engine layered on the same AI pipeline. Students configure a topic, question count (5 or 10), difficulty (easy/medium/hard), and question type (mixed, MCQ, true/false, short answer); the server generates a question set, scores each answer server-side, and returns a session result.
+
+### Endpoints
+
+`POST /practice/generate` (Bearer token):
+
+```
+Body: { "topic": "string (2-100 chars)", "questionCount": 5 | 10, "difficulty": "easy" | "medium" | "hard", "questionType": "mixed" | "mcq" | "true_false" | "short_answer" }
+200  { success, data: PracticeSet { sessionId, topic, config, questions[] } }
+400  VALIDATION_ERROR
+401  UNAUTHORIZED
+429  RATE_LIMITED            (per-user window)
+503  AI_PROVIDER_NOT_CONFIGURED
+502  AI_RESPONSE_INVALID      (malformed/unsafe generated questions)
+500  INTERNAL_SERVER_ERROR
+```
+
+`POST /practice/answer` (Bearer token):
+
+```
+Body: { "sessionId", "questionId", "answer" }
+200  { success, data: PracticeEvaluation { questionId, correct, explanation, correctAnswer } }
+400  VALIDATION_ERROR
+401  UNAUTHORIZED
+404  PRACTICE_SESSION_NOT_FOUND / PRACTICE_QUESTION_NOT_FOUND
+```
+
+`POST /practice/complete` (Bearer token):
+
+```
+Body: { "sessionId" }
+200  { success, data: PracticeResult { sessionId, topic, totalQuestions, correctAnswers, incorrectAnswers, accuracy, score, results[] } }
+400/401/404 as above
+```
+
+Middleware chain: `authenticate → per-user rate limiter → validate(schema) → handler`.
+
+### Session Model
+
+- Practice sessions are **stateless server-side**: kept in an in-memory map keyed by an opaque `sessionId` (`randomUUID`), 60-minute TTL, max 12 concurrent sessions per user. Nothing is written to the database in Phase 7.
+- The `PracticeSet` returned to the client contains questions **without** correct answers, so a student can never read correct answers from app state, network, or DevTools.
+- `/practice/answer` is idempotent: re-submitting an already-answered question returns the recorded evaluation without changing the session score.
+
+### Generation & Evaluation (`apps/api/src/practice`)
+
+- The practice prompt (`apps/api/src/ai/prompts/practice.ts`) follows the AI Tutor's strict JSON-output / beginner-friendly / no-fabrication rules and requests exactly `questionCount` questions of the configured type and difficulty.
+- `practice.normalizer.ts` normalizes provider JSON into `InternalPracticeQuestion[]`, refusing unsafe output (missing/undefined answer, wrong option count, balanced true/false options, duplicate text, too few/many questions) with `502 AI_RESPONSE_INVALID`.
+- `evaluator.ts` scores answers server-side. MCQ/true-false use exact option matching; short answer uses normalized text comparison (trim, lowercase, whitespace collapse, trailing punctuation strip) — a documented Phase 7 limitation (no semantic grading).
+- Client rendering: web (`practice-tutor.tsx`) and mobile (`practice-flow.tsx`) share the same state machine (setup → staged loading → question → feedback → result) and reuse the `?topic=` (into Practice) and `/learn?q=` (back into Learn) navigation patterns.
+
+### Protection & Cost Controls
+
+- Providers/keys read from env at runtime (503 when unconfigured) — same rules as `/ai/learn`
+- Per-user in-memory rate limits: 20 generate requests / 10 minutes and 200 answer+complete actions / 10 minutes
+- `maxTokens` 2500, `temperature` 0.4, 30s timeout per completion
+- Secrets never leave the server; sanitized errors only
 
 ## Future Extensibility
 

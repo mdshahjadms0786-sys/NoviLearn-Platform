@@ -179,3 +179,62 @@ export interface LearningResponse {
   visualLearning?: VisualLearning;
   disclaimer?: string;
 }
+
+export type PracticeQuestionType = "mcq" | "true_false" | "short_answer";
+
+export type PracticeDifficulty = "easy" | "medium" | "hard";
+
+export type PracticeQuestionMode = "mixed" | PracticeQuestionType;
+
+export interface PracticeConfig {
+  topic: string;
+  questionCount: 5 | 10;
+  difficulty: PracticeDifficulty;
+  questionType: PracticeQuestionMode;
+}
+
+export interface PracticeQuestion {
+  id: string;
+  type: PracticeQuestionType;
+  question: string;
+  options?: string[];
+}
+
+export interface PracticeSet {
+  sessionId: string;
+  topic: string;
+  config: PracticeConfig;
+  questions: PracticeQuestion[];
+}
+
+export interface PracticeAnswerInput {
+  sessionId: string;
+  questionId: string;
+  answer: string;
+}
+
+export interface PracticeEvaluation {
+  questionId: string;
+  correct: boolean;
+  explanation: string;
+  correctAnswer: string;
+}
+
+export interface PracticeQuestionResult {
+  questionId: string;
+  correct: boolean;
+  answer: string;
+  correctAnswer: string;
+  explanation: string;
+}
+
+export interface PracticeResult {
+  sessionId: string;
+  topic: string;
+  totalQuestions: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  accuracy: number;
+  score: number;
+  results: PracticeQuestionResult[];
+}

@@ -8,6 +8,7 @@ import { ContinueLearning } from "./continue-learning";
 import { FollowUpQuestions } from "./follow-up-questions";
 import { LearningSection } from "./learning-section";
 import { MarkdownText } from "./markdown";
+import { PracticeCta } from "./practice-cta";
 import { RelatedConcepts } from "./related-concepts";
 import { VisualLearning } from "./visual-learning";
 import { useTheme } from "../../theme-provider";
@@ -57,6 +58,8 @@ export function LearningExperience({
         response.nextLearning.length > 0 && (
           <ContinueLearning topics={response.nextLearning} />
         )}
+
+      <PracticeCta topic={response.question} />
 
       {followUpSection !== undefined &&
         followUpSection.items !== undefined &&

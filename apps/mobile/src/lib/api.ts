@@ -4,6 +4,11 @@ import type {
   LearningQuestion,
   LearningResponse,
   LoginInput,
+  PracticeAnswerInput,
+  PracticeConfig,
+  PracticeEvaluation,
+  PracticeResult,
+  PracticeSet,
   SignupInput,
   User,
 } from "@novilearn/types";
@@ -94,6 +99,27 @@ export const aiApi = {
     apiClient<LearningResponse>("/ai/learn", {
       method: "POST",
       body: input,
+      token,
+    }),
+};
+
+export const practiceApi = {
+  generate: (token: string, input: PracticeConfig) =>
+    apiClient<PracticeSet>("/practice/generate", {
+      method: "POST",
+      body: input,
+      token,
+    }),
+  answer: (token: string, input: PracticeAnswerInput) =>
+    apiClient<PracticeEvaluation>("/practice/answer", {
+      method: "POST",
+      body: input,
+      token,
+    }),
+  complete: (token: string, sessionId: string) =>
+    apiClient<PracticeResult>("/practice/complete", {
+      method: "POST",
+      body: { sessionId },
       token,
     }),
 };

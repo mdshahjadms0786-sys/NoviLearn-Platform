@@ -53,6 +53,38 @@ export const learningQuestionSchema = z.object({
   question: z.string().trim().min(2).max(1000),
 });
 
+export const practiceDifficultySchema = z.enum(["easy", "medium", "hard"]);
+
+export const practiceQuestionTypeSchema = z.enum([
+  "mcq",
+  "true_false",
+  "short_answer",
+]);
+
+export const practiceQuestionModeSchema = z.enum([
+  "mixed",
+  "mcq",
+  "true_false",
+  "short_answer",
+]);
+
+export const practiceConfigSchema = z.object({
+  topic: z.string().trim().min(2).max(100),
+  questionCount: z.union([z.literal(5), z.literal(10)]).default(5),
+  difficulty: practiceDifficultySchema.default("medium"),
+  questionType: practiceQuestionModeSchema.default("mixed"),
+});
+
+export const practiceAnswerSchema = z.object({
+  sessionId: z.string().trim().min(1).max(512),
+  questionId: z.string().trim().min(1).max(64),
+  answer: z.string().trim().min(1).max(2000),
+});
+
+export const practiceCompleteSchema = z.object({
+  sessionId: z.string().trim().min(1).max(512),
+});
+
 export const createApiResponse = <T>(
   data: T,
   meta?: Record<string, unknown>,

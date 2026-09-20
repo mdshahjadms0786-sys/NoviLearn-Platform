@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { Dumbbell } from 'lucide-react';
+import { useSearchParams } from "next/navigation";
+import * as React from "react";
 
-import { ComingSoon } from '@/components/placeholder/coming-soon';
+import { PracticeTutor } from "@/components/practice/practice-tutor";
+
+function PracticeContent() {
+  const searchParams = useSearchParams();
+  const initialTopic = searchParams.get("topic") ?? undefined;
+
+  return <PracticeTutor initialTopic={initialTopic} />;
+}
 
 export default function PracticePage() {
   return (
-    <ComingSoon
-      title="Practice"
-      heading="Practice experiences are on the way"
-      description="Practice experiences to reinforce your learning will be introduced in a future phase."
-      icon={
-        <Dumbbell
-          className="h-8 w-8 text-muted-foreground"
-          aria-hidden="true"
-        />
-      }
-    />
+    <React.Suspense fallback={null}>
+      <PracticeContent />
+    </React.Suspense>
   );
 }

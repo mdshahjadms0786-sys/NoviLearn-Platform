@@ -1,28 +1,18 @@
-'use client';
+"use client";
 
-import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from "expo-router";
 
-import { AppShell } from '../components/layout/app-shell';
-import { ComingSoon } from '../components/placeholder/coming-soon';
-import { useTheme } from '../theme-provider';
+import { AppShell } from "../components/layout/app-shell";
+import { PracticeFlow } from "../components/practice/practice-flow";
 
 export default function PracticeScreen() {
-  const { theme } = useTheme();
+  const params = useLocalSearchParams<{ topic?: string | string[] }>();
+  const initialTopic =
+    typeof params.topic === "string" ? params.topic : undefined;
 
   return (
     <AppShell>
-      <ComingSoon
-        title="Practice"
-        heading="Practice experiences are on the way"
-        description="Practice experiences to reinforce your learning will be introduced in a future phase."
-        icon={
-          <Ionicons
-            name="fitness-outline"
-            size={28}
-            color={theme.colors.onSurfaceVariant}
-          />
-        }
-      />
+      <PracticeFlow initialTopic={initialTopic} />
     </AppShell>
   );
 }
