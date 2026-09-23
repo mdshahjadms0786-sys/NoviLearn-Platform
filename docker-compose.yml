@@ -9,7 +9,10 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      # postgres:18+ stores data under a major-version subdirectory; mount the
+      # volume at /var/lib/postgresql (NOT /var/lib/postgresql/data, which the
+      # 18+ entrypoint rejects as an "unused mount/volume").
+      - postgres-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d novilearn"]
       interval: 5s
