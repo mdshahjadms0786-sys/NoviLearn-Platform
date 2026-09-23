@@ -16,6 +16,7 @@ function Spinner({ className, size = 'md' }: SpinnerProps) {
 
   return (
     <svg
+      aria-hidden="true"
       className={cn('animate-spin text-primary', sizeClasses[size], className)}
       xmlns="http://www.w3.org/2000/svg"
       fill="none"

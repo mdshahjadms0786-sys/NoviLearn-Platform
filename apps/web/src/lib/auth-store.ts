@@ -4,7 +4,8 @@ import { create } from 'zustand';
 
 import type { LoginInput, SignupInput, User } from '@novilearn/types';
 
-import { authApi } from './api';
+import { ApiClientError, authApi } from './api';
+import { onAuthEvent } from './auth-events';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
@@ -26,6 +27,12 @@ function writeToken(token: string | null): void {
   } else {
     window.localStorage.setItem(TOKEN_KEY, token);
   }
+}
+
+function isAuthFailure(error: unknown): boolean {
+  return (
+    error instanceof ApiClientError && error.error.statusCode === 401
+  );
 }
 
 export interface AuthState {
@@ -59,9 +66,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const user = await authApi.me(token);
       set({ status: 'authenticated', user, token });
-    } catch {
-      writeToken(null);
-      set({ status: 'unauthenticated', user: null, token: null });
+    } catch (error) {
+      if (isAuthFailure(error)) {
+        writeToken(null);
+        set({ status: 'unauthenticated', user: null, token: null });
+        return;
+      }
+      // A transient network/server failure should not destroy a valid
+      // session. Keep the stored token so a reload can retry; the UI shows
+      // the sign-in screen in the meantime.
+      set({ status: 'unauthenticated', user: null, token });
     }
   },
   login: async (input) => {
@@ -87,3 +101,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ status: 'unauthenticated', user: null, token: null });
   },
 }));
+
+// A 401 surfaced by an authenticated API call means the session is stale (or
+// revoked server-side). Clear client auth state so guarded routes redirect to
+// sign-in. Login/signup failures never emit (they send no token).
+onAuthEvent(() => {
+  const { status, token } = useAuthStore.getState();
+  if (status === 'authenticated' && token !== null) {
+    writeToken(null);
+    useAuthStore.setState({ status: 'unauthenticated', user: null, token: null });
+  }
+});

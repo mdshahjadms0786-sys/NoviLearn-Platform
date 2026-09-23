@@ -29,6 +29,7 @@ export function EmptyState({
       <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
         {icon || (
           <svg
+            aria-hidden="true"
             className="h-8 w-8 text-muted-foreground"
             fill="none"
             stroke="currentColor"
@@ -76,6 +77,7 @@ export function ErrorState({
     >
       <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
         <svg
+          aria-hidden="true"
           className="h-8 w-8 text-destructive"
           fill="none"
           stroke="currentColor"

@@ -8,6 +8,7 @@ import type {
   LanguageModelMessage,
 } from "./ai.types";
 import { normalizeProviderResponse } from "./normalizer";
+import { buildGrounding } from "../rag/rag.service";
 import { buildTutorMessages } from "./prompts/system";
 import { createProvider } from "./providers";
 
@@ -53,9 +54,14 @@ export async function completeProviderRequest(
 export async function generateLearningResponse(
   input: AiCompletionInput,
 ): Promise<LearningResponse> {
+  const grounding = await buildGrounding(input.userId, input.question);
   const raw = await completeProviderRequest({
-    messages: buildTutorMessages(input.question),
+    messages: buildTutorMessages(input.question, grounding),
   });
 
-  return normalizeProviderResponse(input.question, raw);
+  const response = normalizeProviderResponse(input.question, raw);
+  if (grounding.sources.length > 0) {
+    response.sources = grounding.sources;
+  }
+  return response;
 }

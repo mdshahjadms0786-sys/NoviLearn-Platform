@@ -1,18 +1,25 @@
 import type {
   ApiError,
   AuthSession,
+  LearningActivity,
   LearningQuestion,
   LearningResponse,
   LoginInput,
+  NextLearningSuggestion,
   PracticeAnswerInput,
   PracticeConfig,
   PracticeEvaluation,
   PracticeResult,
+  PracticeSessionDetail,
+  PracticeSessionSummary,
   PracticeSet,
+  ProgressSummary,
   SignupInput,
+  TopicProgress,
   User,
 } from "@novilearn/types";
 
+import { emitAuthEvent } from "./auth-events";
 import { API_URL } from "./config";
 
 export class ApiClientError extends Error {
@@ -59,6 +66,10 @@ export async function apiClient<T>(
       error?: ApiError;
       success?: boolean;
     };
+
+    if (response.status === 401 && options.token !== undefined) {
+      emitAuthEvent();
+    }
 
     if (!response.ok || payload.success === false || payload.error) {
       throw new ApiClientError(
@@ -122,4 +133,29 @@ export const practiceApi = {
       body: { sessionId },
       token,
     }),
+};
+
+export const progressApi = {
+  summary: (token: string) =>
+    apiClient<ProgressSummary>("/progress/summary", { token }),
+  learningHistory: (token: string, limit = 50) =>
+    apiClient<LearningActivity[]>(`/progress/history/learning?limit=${limit}`, {
+      token,
+    }),
+  practiceHistory: (token: string, limit = 50) =>
+    apiClient<PracticeSessionSummary[]>(
+      `/progress/history/practice?limit=${limit}`,
+      {
+        token,
+      },
+    ),
+  practiceDetail: (token: string, sessionId: string) =>
+    apiClient<PracticeSessionDetail>(
+      `/progress/history/practice/${encodeURIComponent(sessionId)}`,
+      { token },
+    ),
+  topics: (token: string) =>
+    apiClient<TopicProgress[]>("/progress/topics", { token }),
+  suggestions: (token: string) =>
+    apiClient<NextLearningSuggestion[]>("/progress/suggestions", { token }),
 };

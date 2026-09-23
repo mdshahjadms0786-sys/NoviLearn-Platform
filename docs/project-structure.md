@@ -22,7 +22,7 @@ NoviLearn/
 ```
 apps/api/
 ├── src/
-│   ├── index.ts             # Entry point, Express app setup, error handler, /auth + /ai + /practice router mounts
+│   ├── index.ts             # Entry point, Express app setup, error handler, /auth + /ai + /practice + /progress router mounts
 │   ├── config.ts            # Environment-derived config (port, urls, jwt, ai)
 │   ├── env.ts               # .env loader + zod schema validation
 │   ├── prisma.ts            # Prisma Client singleton
@@ -44,14 +44,21 @@ apps/api/
 │   │   ├── evaluator.ts     # Answer evaluation (mcq / true-false / short answer)
 │   │   ├── session-store.ts # In-memory ephemeral session store (60-min TTL, per-user cap)
 │   │   └── text.ts          # Answer/text normalization helpers
+│   ├── progress/
+│   │   ├── calculations.ts  # Pure mastery + topic-progress computation
+│   │   ├── personalization.ts # Pure next-learning suggestion builder
+│   │   └── progress.service.ts # DB aggregation, activity recording, history/summary/suggestions
 │   ├── routes/
 │   │   ├── auth.routes.ts   # /auth routes
 │   │   ├── ai.routes.ts     # /ai routes (learn endpoint + protection middleware)
-│   │   └── practice.routes.ts # /practice routes (generate/answer/complete + limits)
+│   │   ├── practice.routes.ts # /practice routes (generate/answer/complete + limits)
+│   │   └── progress.routes.ts # /progress routes (summary/history/topics/suggestions + limits)
 │   ├── controllers/
 │   │   ├── auth.controller.ts  # Auth request handlers
-│   │   ├── ai.controller.ts    # AI request handlers
-│   │   └── practice.controller.ts # Practice request handlers
+│   │   ├── ai.controller.ts    # AI request handlers (+ records learning activity)
+│   │   ├── practice.controller.ts # Practice request handlers
+│   │   └── progress.controller.ts # Progress request handlers
+│   ├── scripts/             # Committed verification scripts (phase8 unit/integration/db checks)
 │   ├── services/
 │   │   └── auth.service.ts  # Business logic (signup, login, me, logout)
 │   ├── middleware/
@@ -88,7 +95,7 @@ apps/web/
 │       │       ├── home/        # Student Home dashboard
 │       │       ├── learn/       # AI Tutor page
 │       │       ├── practice/    # Practice session page (config → questions → results)
-│       │       ├── progress/    # Progress placeholder
+│       │       ├── progress/    # Progress dashboard (stats, activity, topics, history, suggestions)
 │       │       └── account/     # Profile page (inside the shell)
 │   ├── components/
 │   │   ├── ui/              # UI component library (shadcn/ui + Radix)
@@ -98,10 +105,11 @@ apps/web/
 │   │   ├── dashboard/       # Student Home sections
 │   │   ├── ai/              # AiTutor, LearningExperience, learning sections (visual/related/continue/follow-ups), QuestionForm, PracticeCta, Markdown (markdown-lite)
 │   │   ├── practice/        # PracticeTutor flow + setup/question/feedback/result views
+│   │   ├── progress/        # ProgressDashboard + stats/activity/topics/history/suggestion views
 │   │   ├── placeholder/     # ComingSoon
 │   │   └── protected-route.tsx  # Auth-gated route wrapper
 │   ├── lib/
-│   │   ├── api.ts           # Typed API client (authApi, aiApi, practiceApi)
+│   │   ├── api.ts           # Typed API client (authApi, aiApi, practiceApi, progressApi)
 │   │   ├── auth-store.ts    # Zustand auth store (localStorage persistence)
 │   │   ├── use-auth.ts      # useAuth hook
 │   │   └── utils.ts         # Utility functions (cn, etc.)
@@ -131,7 +139,7 @@ apps/mobile/
 │   │   ├── account.tsx      # Profile screen (inside AppShell)
 │   │   ├── learn.tsx        # AI Tutor screen (inside AppShell)
 │   │   ├── practice.tsx     # Practice session screen (inside AppShell)
-│   │   └── progress.tsx     # Progress placeholder (inside AppShell)
+│   │   └── progress.tsx     # Progress dashboard screen (inside AppShell)
 │   ├── components/
 │   │   ├── ui/              # UI component library (RN primitives)
 │   │   ├── auth/            # Auth-screen, form-field
@@ -139,11 +147,12 @@ apps/mobile/
 │   │   ├── dashboard/       # Student Home sections
 │   │   ├── ai/              # AiTutor, LearningExperience, learning sections (visual/related/continue/follow-ups), QuestionForm, PracticeCta, MarkdownText (markdown-lite)
 │   │   ├── practice/        # PracticeFlow + setup/question/feedback/result views
+│   │   ├── progress/        # ProgressDashboard + stats/activity/topics/history/suggestion views
 │   │   ├── placeholder/     # ComingSoon
 │   │   ├── require-auth.tsx # Auth-gated wrapper
 │   │   └── design-system-showcase.tsx  # Mobile component showcase
 │   ├── lib/
-│   │   ├── api.ts           # Typed API client (authApi, aiApi, practiceApi)
+│   │   ├── api.ts           # Typed API client (authApi, aiApi, practiceApi, progressApi)
 │   │   ├── auth-store.ts    # Zustand auth store (AsyncStorage persistence)
 │   │   ├── config.ts        # Env-derived config (API_URL)
 │   │   └── utils.ts         # Utility functions
@@ -216,6 +225,7 @@ packages/types/
 - `LearningQuestion`, `LearningResponse`, `LearningResponseSection`, `LearningSectionType` - AI Tutor request/response contract
 - `VisualLearning`, `VisualLearningNode`, `VisualLearningEdge`, `VisualLearningType`, plus optional `visualLearning`/`relatedConcepts`/`nextLearning` on `LearningResponse` - Phase 6 learning-experience enrichment
 - `PracticeQuestionType`, `PracticeDifficulty`, `PracticeQuestionMode`, `PracticeConfig`, `PracticeQuestion`, `PracticeSet`, `PracticeAnswerInput`, `PracticeEvaluation`, `PracticeQuestionResult`, `PracticeResult` - Phase 7 practice/quiz/assessment contract
+- `LearningActivity`, `ActivitySource`, `RecentActivityItem`, `ProgressSummary`, `MasteryState`, `TopicProgress`, `SuggestionKind`, `NextLearningSuggestion`, `PracticeSessionSummary`, `PracticeHistoryResultRow`, `PracticeSessionDetail` - Phase 8 progress/mastery/personalization contract
 
 ### packages/design-tokens - Shared Design Tokens
 
@@ -257,6 +267,7 @@ packages/shared/
 - `loginSchema`, `signupSchema` - Signup/login form schemas (shared client + server)
 - `learningQuestionSchema` - AI Tutor question validation (trim, 2-1000 chars)
 - `practiceConfigSchema`, `practiceAnswerSchema`, `practiceCompleteSchema`, `practiceDifficultySchema`, `practiceQuestionTypeSchema`, `practiceQuestionModeSchema` - Practice/quiz request validation
+- `progressHistoryLimitSchema`, `practiceSessionIdParamSchema` - Progress history query/path validation
 - `createApiResponse()` - Success response helper
 - `createApiError()` - Error response helper
 - `createPaginatedResponse()` - Pagination helper
@@ -273,6 +284,7 @@ docs/
 ├── phase-5-final-report.md  # Phase 5 (AI Tutor / Learning Intelligence) delivery report
 ├── phase-6-final-report.md  # Phase 6 (Learning Experience & Interactive Learning) delivery report
 ├── phase-7-final-report.md  # Phase 7 (Practice, Quiz & Assessment Foundation) delivery report
+├── phase-8-final-report.md  # Phase 8 (Progress, Mastery & Personalization) delivery report
 └── project-structure.md     # This file
 ```
 

@@ -37,7 +37,8 @@ NoviLearn/
 - **Auth Revocation**: `tokenVersion` on User — logout increments it and invalidates issued JWTs
 - **Security**: bcrypt hashing (cost 12), generic login errors, in-memory rate limiting
 - **AI Tutor / Learning Experience**: authenticated `POST /ai/learn` → provider abstraction → normalized structured `LearningResponse` (summary, explanation, key points, example, analogy, plus optional visual learning, related concepts, and next topics); provider only configurable via env (`AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`); secrets stay server-side; per-user rate limit + duplicate-guard; stateless (no chat/learning-state persistence)
-- **Practice / Assessment**: authenticated `POST /practice/generate`, `/practice/answer`, `/practice/complete` → ephemeral server-side sessions (in-memory, 60-min TTL, no DB persistence) → AI-generated questions (MCQ, true/false, short answer) → server-side evaluation → session result; correct answers never reach the client before submission; per-user rate limits; idempotent answering
+- **Practice / Assessment**: authenticated `POST /practice/generate`, `/practice/answer`, `/practice/complete` → ephemeral server-side sessions (in-memory, 60-min TTL) → AI-generated questions (MCQ, true/false, short answer) → server-side evaluation → session result; on completion the result is **persisted** to `practice_sessions`; correct answers never reach the client before submission; per-user rate limits; idempotent answering
+- **Progress / Personalization**: authenticated `GET /progress/summary`, `/progress/history/learning`, `/progress/history/practice`, `/progress/history/practice/:id`, `/progress/topics`, `/progress/suggestions` → read-only aggregation over the user's persisted `learning_activities` and `practice_sessions`; per-topic mastery/progress and deterministic next-learning suggestions computed server-side; owner-scoped queries
 - **CORS**: Restricted to the web app origin (`WEB_URL`)
 - **Health Check**: `GET /health` endpoint
 
@@ -54,7 +55,7 @@ NoviLearn/
 - **Student Home**: `/home` dashboard (welcome, learning entry, quick actions, continue learning, recent activity, recommended) with empty states only
 - **Learn**: `/learn` learning-experience page (question input → staged loading → Learning Experience: question banner, concept summary, key points, examples, analogies, visual learning, related concepts, continue learning, and auto-submitting follow-up questions); prefills from the dashboard with `?q=`
 - **Practice**: `/practice` practice session flow (config form → staged loading → per-question answering with instant feedback → results & breakdown); prefills a topic with `?topic=`
-- **Progress**: `/progress` coming-soon page
+- **Progress**: `/progress` progress dashboard (stats, recent activity, next-learning suggestions, per-topic mastery/progress, learning history, practice history with per-session detail); empty state for new users
 - **Profile**: `/account` profile page inside the app shell (account info, learning profile, sign out)
 - **Landing Redirect**: authenticated visitors to `/` are redirected to `/home`
 - **Forms**: React Hook Form + Zod validation
@@ -75,7 +76,7 @@ NoviLearn/
 - **Student Home**: `/` dashboard (welcome, learning entry, quick actions, continue learning, recent activity, recommended) with empty states only
 - **Learn**: `/learn` learning-experience screen (question input → staged loading → Learning Experience with concept summary, key points, examples, analogies, visual learning, related concepts, continue learning, and follow-up questions), prefills from the dashboard with `?q=`
 - **Practice**: `/practice` practice session screen (config form → staged loading → per-question answering with instant feedback → results & breakdown); prefills a topic with `?topic=`
-- **Progress**: `/progress` coming-soon screen
+- **Progress**: `/progress` progress dashboard (stats, recent activity, next-learning suggestions, per-topic mastery/progress, learning history, practice history with per-session detail); empty state for new users
 - **Profile**: `/account` inside the shell (membership, learning profile, design system, sign out)
 - **Forms**: React Hook Form + Zod validation
 - **Theming**: Light/dark mode with React Native Paper theming
@@ -158,6 +159,10 @@ interface ApiError {
 Current models:
 
 - User (id, email, name, password, role, tokenVersion, createdAt, updatedAt)
+- LearningActivity (id, userId, topic, type, metadata Json?, createdAt) — one row per successful AI learn; indexed by `(userId, createdAt desc)` and `(userId, topic)`
+- PracticeSession (id, userId, topic, questionCount, difficulty, questionType, totalQuestions, correctAnswers, incorrectAnswers, accuracy, score, results Json, completedAt) — one row per completed practice session, with the enriched per-question breakdown in `results`; indexed by `(userId, completedAt desc)` and `(userId, topic)`
+
+Both activity tables cascade on user deletion.
 
 `tokenVersion` is an integer (default 0) included as a `version` claim in JWTs. When a user logs out, the counter is incremented, which invalidates every previously issued token for that user.
 
@@ -214,7 +219,7 @@ All app-shell screens are wrapped in the existing `ProtectedRoute`/`RequireAuth`
 
 ### Placeholder Screens
 
-Progress is a first-class route with a shared `ComingSoon` placeholder so navigation and layout stay functional before its engine arrives. Practice shipped a full practice engine in Phase 7.
+Progress shipped its progress/mastery/personalization engine in Phase 8 and Practice shipped a full practice engine in Phase 7, so no route uses the `ComingSoon` placeholder by default anymore; the shared placeholder remains available for future routes.
 
 ## AI Tutor (Phase 5)
 
@@ -325,6 +330,40 @@ Middleware chain: `authenticate → per-user rate limiter → validate(schema) �
 - Per-user in-memory rate limits: 20 generate requests / 10 minutes and 200 answer+complete actions / 10 minutes
 - `maxTokens` 2500, `temperature` 0.4, 30s timeout per completion
 - Secrets never leave the server; sanitized errors only
+
+## Progress, Mastery & Personalization (Phase 8)
+
+The progress surface reads back the activity that Phases 5–7 produced and derives mastery and personalization from it. Two writes feed it: `/ai/learn` records a `LearningActivity` on success, and `/practice/complete` persists the session to `PracticeSession`.
+
+### Endpoints
+
+All six routes require a Bearer token and share a per-user rate limiter (300 requests / 10 minutes):
+
+```
+GET /progress/summary              → ProgressSummary
+GET /progress/history/learning     → LearningActivity[]        (?limit=1..100, default 50)
+GET /progress/history/practice     → PracticeSessionSummary[]  (?limit=1..100, default 50)
+GET /progress/history/practice/:id → PracticeSessionDetail     (owner-scoped, else 404)
+GET /progress/topics               → TopicProgress[]
+GET /progress/suggestions          → NextLearningSuggestion[]
+```
+
+Errors: `401 UNAUTHORIZED`, `400 VALIDATION_ERROR` (bad `limit`/non-UUID id), `404 PRACTICE_SESSION_NOT_FOUND`, `429 RATE_LIMITED`.
+
+### Computation (`apps/api/src/progress`)
+
+- `calculations.ts` — pure `computeMastery` and `computeTopicProgress`:
+  - Mastery: no activity → `NOT_STARTED`; learning only → `LEARNING`; ≥ 2 practices with best ≥ 80 and average ≥ 80 → `STRONG`; otherwise `PRACTICING`.
+  - Progress (0–100): learning `min(count,4)/4*50` + practice `min(count,3)/3*30` + average accuracy `value/100*20`, rounded and clamped.
+- `personalization.ts` — pure `buildSuggestions`: ordered `continue_learning` (most recent non-`STRONG` topic, falling back to most recent), `practice_again`, `review_weak_topic` (lowest best-accuracy below 80), `related_next_topic` (from recent learning metadata). One item per kind, deterministic.
+- `progress.service.ts` — aggregation via Prisma `groupBy`/`aggregate`, topic normalization (trim/collapse/lowercase, cap 500), recent-activity merge (learn + practice, desc, cap 10), summary counts and `averageAccuracy` (one decimal).
+
+### Design Notes
+
+- Topics are keyed by the normalized learning question / practice topic string; learning and practice activity for the same normalized topic are merged into one `TopicProgress` row.
+- All reads are owner-scoped and indexed by `(userId, ...)`; the practice-detail lookup is `findFirst({ where: { id, userId } })` so other users' ids return `404`.
+- The dashboard fetches summary/history/topics/suggestions in parallel, shows a loading state, a safe retryable error, and a first-run empty state — no fabricated data.
+- Web (`apps/web/src/components/progress/`) and mobile (`apps/mobile/src/components/progress/`) share the same component set and data flow, including a practice session detail view with per-question breakdown.
 
 ## Future Extensibility
 

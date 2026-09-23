@@ -12,6 +12,7 @@ import { validate } from "../validators/auth";
 export const aiRouter: Router = Router();
 
 const AI_LIMITER = createRateLimiter({
+  name: "ai-learn",
   windowMs: 10 * 60 * 1000,
   max: 20,
   keyFor: (req) => (req as AuthenticatedRequest).user.id,

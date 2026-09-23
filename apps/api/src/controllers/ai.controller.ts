@@ -4,6 +4,7 @@ import { createApiResponse } from "@novilearn/shared";
 
 import { generateLearningResponse } from "../ai/ai.service";
 import type { AuthenticatedRequest } from "../middleware/auth";
+import { recordLearningActivity } from "../progress/progress.service";
 import { asyncHandler } from "../utils/async-handler";
 
 export const learnController = asyncHandler(
@@ -13,6 +14,12 @@ export const learnController = asyncHandler(
       question: req.body.question as string,
       userId: authenticated.user.id,
     });
+    await recordLearningActivity(
+      authenticated.user.id,
+      req.body.question as string,
+      response.relatedConcepts,
+      response.nextLearning,
+    );
     res.status(200).json(createApiResponse(response));
   },
 );

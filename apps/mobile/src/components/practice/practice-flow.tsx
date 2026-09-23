@@ -30,6 +30,12 @@ const LOADING_STAGES = [
   "Creating questions...",
 ] as const;
 
+const ERROR_TITLES: Record<PendingAction, string> = {
+  generate: "Something went wrong while preparing your practice",
+  answer: "Something went wrong while evaluating your answer",
+  complete: "Something went wrong while finishing your practice",
+};
+
 interface PracticeFlowProps {
   initialTopic?: string | undefined;
 }
@@ -231,7 +237,7 @@ export function PracticeFlow({ initialTopic }: PracticeFlowProps) {
 
       {status === "error" && (
         <ErrorState
-          title="Something went wrong while preparing your practice"
+          title={ERROR_TITLES[pendingAction]}
           description={errorMessage}
           action={
             <View style={styles.errorActions}>

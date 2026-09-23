@@ -7,6 +7,7 @@ import type { LearningResponse } from "@novilearn/types";
 import { ContinueLearning } from "./continue-learning";
 import { FollowUpQuestions } from "./follow-up-questions";
 import { LearningSection } from "./learning-section";
+import { LearningSources } from "./learning-sources";
 import { MarkdownText } from "./markdown";
 import { PracticeCta } from "./practice-cta";
 import { RelatedConcepts } from "./related-concepts";
@@ -53,6 +54,10 @@ export function LearningExperience({
         response.relatedConcepts.length > 0 && (
           <RelatedConcepts concepts={response.relatedConcepts} />
         )}
+
+      {response.sources !== undefined && response.sources.length > 0 && (
+        <LearningSources sources={response.sources} />
+      )}
 
       {response.nextLearning !== undefined &&
         response.nextLearning.length > 0 && (

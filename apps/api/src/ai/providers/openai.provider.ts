@@ -1,4 +1,5 @@
 import { AppError } from "../../errors";
+import { logger } from "../../logger";
 import type {
   LanguageModelConfig,
   LanguageModelMessage,
@@ -52,7 +53,7 @@ export class OpenAiProvider implements LanguageModelProvider {
         signal: AbortSignal.timeout(settings.timeoutMs),
       });
     } catch (error) {
-      console.error("[ai] provider request failed", {
+      logger.error("[ai] provider request failed", {
         provider: this.name,
         reason: error instanceof Error ? error.message : "unknown error",
       });
@@ -60,7 +61,7 @@ export class OpenAiProvider implements LanguageModelProvider {
     }
 
     if (!response.ok) {
-      console.error("[ai] provider http error", {
+      logger.error("[ai] provider http error", {
         provider: this.name,
         status: response.status,
       });
@@ -71,7 +72,7 @@ export class OpenAiProvider implements LanguageModelProvider {
     try {
       body = (await response.json()) as ChatCompletionResponse;
     } catch {
-      console.error("[ai] provider returned invalid json", {
+      logger.error("[ai] provider returned invalid json", {
         provider: this.name,
       });
       throw providerUnavailable();
@@ -79,7 +80,7 @@ export class OpenAiProvider implements LanguageModelProvider {
 
     const content = body.choices?.[0]?.message?.content;
     if (!content || content.trim() === "") {
-      console.error("[ai] provider returned empty content", {
+      logger.error("[ai] provider returned empty content", {
         provider: this.name,
       });
       throw providerUnavailable();

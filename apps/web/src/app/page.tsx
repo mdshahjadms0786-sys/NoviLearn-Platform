@@ -15,10 +15,14 @@ export default function HomePage() {
         <p className="text-lg text-muted-foreground max-w-2xl text-center">
           AI-powered learning platform for students
         </p>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap justify-center gap-3">
           <AuthLinks />
           <Button asChild>
-            <a href="/api/health">Check API Health</a>
+            <a
+              href={`${(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(/\/+$/, "")}/health`}
+            >
+              Check API Health
+            </a>
           </Button>
           <Button variant="outline" asChild>
             <Link href="/design-system">Design System</Link>

@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: novilearn
+    # 5433 on the host so it never collides with a developer's local Postgres.
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d novilearn"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/novilearn?schema=public
+      PORT: "3001"
+      NODE_ENV: production
+      API_URL: http://localhost:3001
+      WEB_URL: http://localhost:3000
+      JWT_SECRET: ${JWT_SECRET:-change-me-super-secret-key-in-production}
+      JWT_EXPIRES_IN: 7d
+      LOG_LEVEL: info
+      SENTRY_DSN: ""
+      # No AI provider key by default: AI Tutor returns a clean 503 (safe failure).
+      # EMBEDDING_PROVIDER empty => local deterministic embeddings; RAG stays best-effort.
+      EMBEDDING_PROVIDER: ""
+      RAG_ENABLED: "true"
+      RAG_TOP_K: 4
+      RAG_MIN_SCORE: 0.3
+    # Apply migrations, then start the API.
+    command: sh -c "pnpm --filter=@novilearn/api db:deploy && node --import tsx apps/api/dist/index.js"
+
+volumes:
+  postgres-data:

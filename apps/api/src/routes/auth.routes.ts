@@ -14,8 +14,16 @@ import { validate } from '../validators/auth';
 
 export const authRouter: Router = Router();
 
-const LOGIN_LIMITER = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 30 });
-const SIGNUP_LIMITER = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 20 });
+const LOGIN_LIMITER = createRateLimiter({
+  name: "auth-login",
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+});
+const SIGNUP_LIMITER = createRateLimiter({
+  name: "auth-signup",
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+});
 
 authRouter.post(
   '/signup',

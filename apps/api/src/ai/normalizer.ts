@@ -9,6 +9,7 @@ import type {
 } from "@novilearn/types";
 
 import { AppError } from "../errors";
+import { logger } from "../logger";
 
 const SECTION_TITLES: Record<LearningSectionType, string> = {
   summary: "Learn this concept",
@@ -139,20 +140,20 @@ export function normalizeProviderResponse(
   try {
     parsed = JSON.parse(rawContent) as unknown;
   } catch {
-    console.error("[ai] response is not valid json");
+    logger.error("[ai] response is not valid json");
     throw invalidResponse();
   }
 
   const result = providerResponseSchema.safeParse(parsed);
   if (!result.success) {
-    console.error("[ai] response does not match expected shape");
+    logger.error("[ai] response does not match expected shape");
     throw invalidResponse();
   }
 
   const raw = result.data;
   const summary = cleanString(raw.summary);
   if (summary === null) {
-    console.error("[ai] response is missing required summary");
+    logger.error("[ai] response is missing required summary");
     throw invalidResponse();
   }
 

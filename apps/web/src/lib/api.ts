@@ -1,17 +1,25 @@
 import type {
   ApiError,
   AuthSession,
+  LearningActivity,
   LearningQuestion,
   LearningResponse,
   LoginInput,
+  NextLearningSuggestion,
   PracticeAnswerInput,
   PracticeConfig,
   PracticeEvaluation,
   PracticeResult,
+  PracticeSessionDetail,
+  PracticeSessionSummary,
   PracticeSet,
+  ProgressSummary,
   SignupInput,
+  TopicProgress,
   User,
 } from "@novilearn/types";
+
+import { emitAuthEvent } from "./auth-events";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -51,11 +59,28 @@ export async function apiClient<T>(
       : {}),
   });
 
-  const payload = (await response.json()) as {
+  let payload: {
     data?: T;
     error?: ApiError;
     success?: boolean;
   };
+  try {
+    payload = (await response.json()) as {
+      data?: T;
+      error?: ApiError;
+      success?: boolean;
+    };
+  } catch {
+    throw new ApiClientError({
+      code: "UNKNOWN_ERROR",
+      message: "The server returned an unexpected response",
+      statusCode: response.status,
+    });
+  }
+
+  if (response.status === 401 && options.token) {
+    emitAuthEvent();
+  }
 
   if (!response.ok || payload.success === false || payload.error) {
     throw new ApiClientError(
@@ -108,4 +133,29 @@ export const practiceApi = {
       body: { sessionId },
       token,
     }),
+};
+
+export const progressApi = {
+  summary: (token: string) =>
+    apiClient<ProgressSummary>("/progress/summary", { token }),
+  learningHistory: (token: string, limit = 50) =>
+    apiClient<LearningActivity[]>(`/progress/history/learning?limit=${limit}`, {
+      token,
+    }),
+  practiceHistory: (token: string, limit = 50) =>
+    apiClient<PracticeSessionSummary[]>(
+      `/progress/history/practice?limit=${limit}`,
+      {
+        token,
+      },
+    ),
+  practiceDetail: (token: string, sessionId: string) =>
+    apiClient<PracticeSessionDetail>(
+      `/progress/history/practice/${encodeURIComponent(sessionId)}`,
+      { token },
+    ),
+  topics: (token: string) =>
+    apiClient<TopicProgress[]>("/progress/topics", { token }),
+  suggestions: (token: string) =>
+    apiClient<NextLearningSuggestion[]>("/progress/suggestions", { token }),
 };

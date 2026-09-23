@@ -28,7 +28,7 @@
     --success: 142 76% 36%;
     --success-foreground: 355 7% 97%;
     --warning: 38 92% 50%;
-    --warning-foreground: 48 96% 89%;
+    --warning-foreground: 38 92% 12%;
     --info: 221.2 83.2% 53.3%;
     --info-foreground: 210 40% 98%;
   }
@@ -54,8 +54,8 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
 
-    --success: 142 71% 45%;
-    --success-foreground: 142 76% 36%;
+    --success: 142 64% 30%;
+    --success-foreground: 210 40% 98%;
     --warning: 38 92% 50%;
     --warning-foreground: 38 92% 15%;
     --info: 217.2 91.2% 59.8%;

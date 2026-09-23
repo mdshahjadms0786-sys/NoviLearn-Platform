@@ -5,12 +5,19 @@ import { create } from 'zustand';
 
 import type { LoginInput, SignupInput, User } from '@novilearn/types';
 
-import { authApi } from './api';
+import { ApiClientError, authApi } from './api';
+import { onAuthEvent } from './auth-events';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
 const TOKEN_STORAGE_KEY = 'novilearn.auth.token';
 const USER_STORAGE_KEY = 'novilearn.auth.user';
+
+function isAuthFailure(error: unknown): boolean {
+  return (
+    error instanceof ApiClientError && error.error.statusCode === 401
+  );
+}
 
 export interface AuthState {
   status: AuthStatus;
@@ -85,9 +92,20 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     try {
       const user = await authApi.me(stored.token);
       set({ status: 'authenticated', user, token: stored.token });
-    } catch {
-      await clearStoredSession();
-      set({ status: 'unauthenticated', user: null, token: null });
+    } catch (error) {
+      if (isAuthFailure(error)) {
+        await clearStoredSession();
+        set({ status: 'unauthenticated', user: null, token: null });
+        return;
+      }
+      // A transient network/server failure should not destroy a valid
+      // session. Resume optimistically from the cached user if present; the
+      // stored token is kept so the next app start can re-validate it.
+      if (stored.user !== null) {
+        set({ status: 'authenticated', user: stored.user, token: stored.token });
+      } else {
+        set({ status: 'unauthenticated', user: null, token: stored.token });
+      }
     }
   },
   login: async (input) => {
@@ -121,3 +139,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ status: 'unauthenticated', user: null, token: null });
   },
 }));
+
+// A 401 surfaced by an authenticated API call means the session is stale (or
+// revoked server-side). Clear client auth state so guarded screens redirect to
+// sign-in. Login/signup failures never emit (they send no token).
+onAuthEvent(() => {
+  const { status, token } = useAuthStore.getState();
+  if (status === 'authenticated' && token !== null) {
+    void clearStoredSession();
+    useAuthStore.setState({ status: 'unauthenticated', user: null, token: null });
+  }
+});

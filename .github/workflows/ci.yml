@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HUSKY: 0
+  PNPM_CACHE_FOLDER: ${{ github.workspace }}/.pnpm-store
+
+jobs:
+  test:
+    name: typecheck, lint, build, tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: novilearn
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d novilearn"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.4.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: pnpm exec prisma generate
+
+      - name: Apply migrations
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/novilearn?schema=public
+        run: pnpm exec prisma migrate deploy
+
+      - name: Typecheck
+        run: pnpm -r run typecheck
+
+      - name: Lint
+        run: pnpm -r run lint
+
+      - name: Build workspace packages + web
+        run: pnpm -r run build
+
+      - name: Phase 8 tests
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/novilearn?schema=public
+        run: |
+          node --import tsx scripts/phase8-unit-tests.ts
+          node --import tsx scripts/phase8-integration-tests.ts
+
+      - name: Phase 9 tests
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/novilearn?schema=public
+        run: |
+          node --import tsx scripts/phase9-unit-tests.ts
+          node --import tsx scripts/phase9-integration-tests.ts
+
+      - name: Phase 10 tests
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/novilearn?schema=public
+          EMBEDDING_PROVIDER: local
+        run: |
+          node --import tsx scripts/phase10-unit-tests.ts
+          node --import tsx scripts/phase10-integration-tests.ts
+          node --import tsx scripts/phase10-cleanup.ts

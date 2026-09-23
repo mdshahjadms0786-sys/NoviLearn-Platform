@@ -199,6 +199,25 @@ pnpm db:studio
 | OPENAI_API_KEY | OpenAI API key                   |
 | AWS_*          | AWS credentials for file storage |
 
+### Server-side AI, RAG, Embeddings & Monitoring (Phase 10)
+
+These are read only by the API server (never shipped to Web or Mobile). Leaving `AI_PROVIDER` empty disables the AI tutor with a clean `503`; leaving `EMBEDDING_PROVIDER` empty uses the deterministic `local` embedding provider so RAG keeps working without any key.
+
+| Variable            | Description                                               | Default           |
+| ------------------- | --------------------------------------------------------- | ----------------- |
+| AI_PROVIDER         | `openai` or `anthropic` (empty = AI disabled, safe `503`) | —                 |
+| AI_API_KEY          | Provider key                                              | —                 |
+| AI_MODEL            | Provider model id                                         | provider-specific |
+| EMBEDDING_PROVIDER  | `openai` or `local` (empty = `local`)                     | `local`           |
+| EMBEDDING_API_KEY   | Defaults to `AI_API_KEY` for openai when empty            | —                 |
+| EMBEDDING_MODEL     | OpenAI embedding model (e.g. `text-embedding-3-small`)    | —                 |
+| EMBEDDING_DIMENSION | Embedding vector size (openai: match the model)           | 1536              |
+| RAG_ENABLED         | Enable retrieval grounding (`true`/`false`)               | `true`            |
+| RAG_TOP_K           | Sources returned to the tutor                             | 4                 |
+| RAG_MIN_SCORE       | Cosine-similarity cutoff                                  | 0.3               |
+| SENTRY_DSN          | Optional; empty disables error reporting                  | —                 |
+| LOG_LEVEL           | `debug` / `info` / `warn` / `error`                       | `info`            |
+
 ### Testing Authentication
 
 ```bash
@@ -425,3 +444,53 @@ pnpm --filter=@novilearn/mobile dev --clear
 pnpm --filter=@novilearn/web clean
 pnpm --filter=@novilearn/web dev
 ```
+
+## Phase 10 Additions
+
+### RAG Knowledge Ingestion
+
+```bash
+# Chunk + embed + upsert files (md/csv/json/txt) into knowledge_chunks
+pnpm --filter=@novilearn/api exec tsx scripts/ingest-knowledge.ts --dir ./docs --source docs
+# --source tags the chunks (used for targeted retrieval/cleanup); requires API .env
+```
+
+Uses the configured `EMBEDDING_PROVIDER` (`openai` needs `EMBEDDING_API_KEY`; `local`/empty runs offline). Retrieval is best-effort: a missing provider, key, or DB error falls back to an ungrounded tutor response.
+
+### Running the API in Production
+
+```bash
+# Build workspaces + API, then run the compiled server (tsx loader resolves workspace src entry points)
+pnpm -r run build
+pnpm --filter=@novilearn/api start   # = node --import tsx dist/index.js
+```
+
+`/health` (liveness) and `/readiness` (database check) are exposed on the same port.
+
+### Test Suites (per phase)
+
+Run from `apps/api`. These spin up a real HTTP server on a fixed port and need the local Postgres (`DATABASE_URL` from `.env`). Reset windows first with the phase-10 cleanup (auth rate limits are keyed by IP).
+
+```bash
+node --import tsx scripts/phase8-unit-tests.ts        # 19 checks
+node --import tsx scripts/phase8-integration-tests.ts # 54 checks, port 3207
+node --import tsx scripts/phase9-unit-tests.ts        # 52 checks
+node --import tsx scripts/phase9-integration-tests.ts # 48 checks, port 3208
+node --import tsx scripts/phase10-unit-tests.ts       # 63 checks
+EMBEDDING_PROVIDER=local node --import tsx scripts/phase10-integration-tests.ts # 31 checks, port 3210
+node --import tsx scripts/phase10-cleanup.ts          # rm test users/chunks + reset all rate-limit buckets
+```
+
+### Docker / Compose
+
+```bash
+# API in a container (multi-stage monorepo build, migrations applied at boot)
+docker compose up --build
+# Postgres 18 on host port 5433, API on 3001. The API intentionally starts
+# with AI unconfigured (clean 503s); set AI_PROVIDER/AI_API_KEY/AI_MODEL +
+# EMBEDDING_* in the compose env to activate the tutor.
+```
+
+### CI
+
+`.github/workflows/ci.yml` runs on push/PR to `main`: a fresh Postgres 18 service container, pnpm install (frozen), `prisma generate` + `migrate deploy` (applies the `cosine_similarity` function), typecheck, lint, build, then all six test suites. Set `HUSKY=0` for CI (done in the workflow).

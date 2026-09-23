@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import type { ComponentProps } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter, type Href } from "expo-router";
+import type { ComponentProps } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useTheme } from '../../theme-provider';
+import { useTheme } from "../../theme-provider";
 
-type IoniconName = ComponentProps<typeof Ionicons>['name'];
+type IoniconName = ComponentProps<typeof Ionicons>["name"];
 
 interface QuickAction {
   href: string;
@@ -18,28 +18,28 @@ interface QuickAction {
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
-    href: '/learn',
-    label: 'Start learning',
-    description: 'Explore a new topic',
-    icon: 'book-outline',
+    href: "/learn",
+    label: "Start learning",
+    description: "Explore a new topic",
+    icon: "book-outline",
   },
   {
-    href: '/practice',
-    label: 'Practice',
-    description: 'Reinforce what you know',
-    icon: 'fitness-outline',
+    href: "/practice",
+    label: "Practice",
+    description: "Reinforce what you know",
+    icon: "fitness-outline",
   },
   {
-    href: '/progress',
-    label: 'View progress',
-    description: 'Track your journey',
-    icon: 'stats-chart-outline',
+    href: "/progress",
+    label: "View progress",
+    description: "Track your journey",
+    icon: "stats-chart-outline",
   },
   {
-    href: '/account',
-    label: 'My profile',
-    description: 'Manage your account',
-    icon: 'person-outline',
+    href: "/account",
+    label: "My profile",
+    description: "Manage your account",
+    icon: "person-outline",
   },
 ];
 
@@ -66,7 +66,7 @@ export function QuickActions() {
                 opacity: pressed ? 0.7 : 1,
               },
             ]}
-            onPress={() => router.push(action.href)}
+            onPress={() => router.push(action.href as Href)}
           >
             <View
               style={[
@@ -104,17 +104,17 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    fontFamily: 'System',
+    fontWeight: "700",
+    fontFamily: "System",
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
     rowGap: 12,
   },
   card: {
-    width: '48%',
+    width: "48%",
     borderRadius: 12,
     borderWidth: 1,
     padding: 14,
@@ -124,17 +124,17 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   label: {
     fontSize: 15,
-    fontWeight: '600',
-    fontFamily: 'System',
+    fontWeight: "600",
+    fontFamily: "System",
   },
   description: {
     fontSize: 13,
-    fontFamily: 'System',
+    fontFamily: "System",
     lineHeight: 18,
   },
 });

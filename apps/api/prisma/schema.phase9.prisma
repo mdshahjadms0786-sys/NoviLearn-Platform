@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String               @id @default(uuid())
+  email              String               @unique
+  name               String
+  password           String
+  role               String               @default("student")
+  tokenVersion       Int                  @default(0)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  learningActivities LearningActivity[]
+  practiceSessions   PracticeSession[]
+
+  @@map("users")
+}
+
+model LearningActivity {
+  id        String   @id @default(uuid())
+  userId    String
+  topic     String
+  type      String   @default("learn")
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, topic])
+  @@map("learning_activities")
+}
+
+model PracticeSession {
+  id               String   @id @default(uuid())
+  userId           String
+  topic            String
+  questionCount    Int
+  difficulty       String
+  questionType     String
+  totalQuestions   Int
+  correctAnswers   Int
+  incorrectAnswers Int
+  accuracy         Int
+  score            Int
+  results          Json
+  completedAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, completedAt(sort: Desc)])
+  @@index([userId, topic])
+  @@map("practice_sessions")
+}

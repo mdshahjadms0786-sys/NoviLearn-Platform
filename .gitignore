@@ -46,8 +46,9 @@ coverage
 # Turbo
 .turbo
 
-# Prisma
-prisma/migrations/
+# Prisma (migrations are version-controlled)
+apps/api/prisma/migrations/*
+!apps/api/prisma/migrations/*/
 
 # Expo
 .expo-shared

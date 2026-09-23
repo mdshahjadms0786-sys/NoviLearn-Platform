@@ -112,6 +112,10 @@ export interface AppConfig {
   jwtSecret: string;
   jwtExpiresIn: string;
   ai: AiConfig;
+  embeddings: EmbeddingConfig;
+  rag: RagConfig;
+  sentryDsn: string;
+  logLevel: LogLevel;
 }
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
@@ -124,12 +128,35 @@ export interface LogEntry {
   error?: Error;
 }
 
-export type AiProviderName = "openai";
+export type AiProviderName = "openai" | "anthropic";
 
 export interface AiConfig {
   provider: AiProviderName | "";
   apiKey: string;
   model: string;
+}
+
+export type EmbeddingProviderName = "openai" | "local";
+
+export interface EmbeddingConfig {
+  provider: EmbeddingProviderName | "";
+  apiKey: string;
+  model: string;
+  dimension: number;
+}
+
+export interface RagConfig {
+  topK: number;
+  minScore: number;
+  enabled: boolean;
+}
+
+export interface KnowledgeSource {
+  title: string;
+  topic: string;
+  source: string;
+  excerpt: string;
+  confidence: number;
 }
 
 export type LearningSectionType =
@@ -177,6 +204,7 @@ export interface LearningResponse {
   relatedConcepts?: string[];
   nextLearning?: string[];
   visualLearning?: VisualLearning;
+  sources?: KnowledgeSource[];
   disclaimer?: string;
 }
 
@@ -237,4 +265,86 @@ export interface PracticeResult {
   accuracy: number;
   score: number;
   results: PracticeQuestionResult[];
+}
+
+export interface LearningActivity {
+  id: string;
+  topic: string;
+  type: "learn";
+  createdAt: string;
+}
+
+export type ActivitySource = "learn" | "practice";
+
+export interface RecentActivityItem {
+  id: string;
+  type: ActivitySource;
+  topic: string;
+  at: string;
+}
+
+export interface ProgressSummary {
+  learningActivityCount: number;
+  practiceSessionCount: number;
+  uniqueTopicCount: number;
+  learnedTopicCount: number;
+  practicedTopicCount: number;
+  totalAnswers: number;
+  totalCorrectAnswers: number;
+  averageAccuracy: number | null;
+  recentActivity: RecentActivityItem[];
+}
+
+export type MasteryState = "NOT_STARTED" | "LEARNING" | "PRACTICING" | "STRONG";
+
+export interface TopicProgress {
+  topic: string;
+  learningCount: number;
+  practiceCount: number;
+  bestAccuracy: number | null;
+  averageAccuracy: number | null;
+  mastery: MasteryState;
+  progress: number;
+  lastActivityAt: string;
+}
+
+export type SuggestionKind =
+  | "continue_learning"
+  | "practice_again"
+  | "review_weak_topic"
+  | "related_next_topic";
+
+export interface NextLearningSuggestion {
+  kind: SuggestionKind;
+  title: string;
+  description: string;
+  topic: string;
+}
+
+export interface PracticeSessionSummary {
+  id: string;
+  topic: string;
+  questionCount: number;
+  difficulty: PracticeDifficulty;
+  questionType: PracticeQuestionMode;
+  totalQuestions: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  accuracy: number;
+  score: number;
+  completedAt: string;
+}
+
+export interface PracticeHistoryResultRow {
+  questionId: string;
+  question: string;
+  type: PracticeQuestionType;
+  correct: boolean;
+  answer: string;
+  correctAnswer: string;
+  explanation: string;
+}
+
+export interface PracticeSessionDetail extends PracticeSessionSummary {
+  results: PracticeHistoryResultRow[];
 }

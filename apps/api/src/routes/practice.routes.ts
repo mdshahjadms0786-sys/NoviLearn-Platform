@@ -19,12 +19,14 @@ import { validate } from "../validators/auth";
 export const practiceRouter: Router = Router();
 
 const PRACTICE_GENERATE_LIMITER = createRateLimiter({
+  name: "practice-generate",
   windowMs: 10 * 60 * 1000,
   max: 20,
   keyFor: (req) => (req as AuthenticatedRequest).user.id,
 });
 
 const PRACTICE_ACTION_LIMITER = createRateLimiter({
+  name: "practice-action",
   windowMs: 10 * 60 * 1000,
   max: 200,
   keyFor: (req) => (req as AuthenticatedRequest).user.id,

@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { Ionicons } from '@expo/vector-icons';
-import { usePathname, useRouter } from 'expo-router';
-import type { ComponentProps } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import { usePathname, useRouter, type Href } from "expo-router";
+import type { ComponentProps } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useTheme } from '../../theme-provider';
+import { useTheme } from "../../theme-provider";
 
-type IoniconName = ComponentProps<typeof Ionicons>['name'];
+type IoniconName = ComponentProps<typeof Ionicons>["name"];
 
 interface NavTab {
   href: string;
@@ -17,25 +17,25 @@ interface NavTab {
 }
 
 const TABS: NavTab[] = [
-  { href: '/', label: 'Home', icon: 'home-outline', activeIcon: 'home' },
-  { href: '/learn', label: 'Learn', icon: 'book-outline', activeIcon: 'book' },
+  { href: "/", label: "Home", icon: "home-outline", activeIcon: "home" },
+  { href: "/learn", label: "Learn", icon: "book-outline", activeIcon: "book" },
   {
-    href: '/practice',
-    label: 'Practice',
-    icon: 'fitness-outline',
-    activeIcon: 'fitness',
+    href: "/practice",
+    label: "Practice",
+    icon: "fitness-outline",
+    activeIcon: "fitness",
   },
   {
-    href: '/progress',
-    label: 'Progress',
-    icon: 'stats-chart-outline',
-    activeIcon: 'stats-chart',
+    href: "/progress",
+    label: "Progress",
+    icon: "stats-chart-outline",
+    activeIcon: "stats-chart",
   },
   {
-    href: '/account',
-    label: 'Profile',
-    icon: 'person-outline',
-    activeIcon: 'person',
+    href: "/account",
+    label: "Profile",
+    icon: "person-outline",
+    activeIcon: "person",
   },
 ];
 
@@ -70,7 +70,7 @@ export function BottomNav({ bottomInset }: BottomNavProps) {
             accessibilityRole="button"
             accessibilityLabel={tab.label}
             accessibilityState={active ? { selected: true } : undefined}
-            onPress={() => router.push(tab.href)}
+            onPress={() => router.push(tab.href as Href)}
             style={styles.tab}
           >
             <Ionicons
@@ -88,21 +88,21 @@ export function BottomNav({ bottomInset }: BottomNavProps) {
 
 const styles = StyleSheet.create({
   nav: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderTopWidth: 1,
     paddingTop: 8,
     paddingHorizontal: 8,
   },
   tab: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 2,
   },
   tabLabel: {
     fontSize: 11,
-    fontWeight: '500',
-    fontFamily: 'System',
+    fontWeight: "500",
+    fontFamily: "System",
   },
 });

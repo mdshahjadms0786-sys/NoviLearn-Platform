@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { PracticeConfig } from "@novilearn/types";
 
 import { AppError } from "../errors";
+import { logger } from "../logger";
 import type { InternalPracticeQuestion } from "./practice.types";
 import { normalizeMatchText } from "./text";
 
@@ -180,13 +181,13 @@ export function normalizePracticeQuestions(
   try {
     parsed = JSON.parse(rawContent) as unknown;
   } catch {
-    console.error("[practice] response is not valid json");
+    logger.error("[practice] response is not valid json");
     throw invalidResponse();
   }
 
   const result = providerResponseSchema.safeParse(parsed);
   if (!result.success) {
-    console.error("[practice] response does not match expected shape");
+    logger.error("[practice] response does not match expected shape");
     throw invalidResponse();
   }
 
@@ -206,7 +207,7 @@ export function normalizePracticeQuestions(
   const selected = cleaned.slice(0, config.questionCount);
 
   if (selected.length < config.questionCount) {
-    console.error("[practice] response has too few distinct questions");
+    logger.error("[practice] response has too few distinct questions");
     throw invalidResponse();
   }
 

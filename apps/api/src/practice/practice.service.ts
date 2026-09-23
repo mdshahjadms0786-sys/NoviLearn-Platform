@@ -1,6 +1,9 @@
+import { Prisma } from "@prisma/client";
+
 import type {
   PracticeConfig,
   PracticeEvaluation,
+  PracticeHistoryResultRow,
   PracticeQuestionResult,
   PracticeResult,
   PracticeSet,
@@ -9,16 +12,21 @@ import type {
 import { completeProviderRequest } from "../ai/ai.service";
 import { buildPracticeMessages } from "../ai/prompts/practice";
 import { AppError } from "../errors";
+import { prisma } from "../prisma";
 import { evaluateAnswer } from "./evaluator";
 import { normalizePracticeQuestions } from "./practice.normalizer";
 import {
   toClientPracticeSet,
   type InternalPracticeQuestion,
+  type PracticeSessionRecord,
 } from "./practice.types";
 import {
   createPracticeSession,
   getValidPracticeSession,
+  savePracticeSession,
 } from "./session-store";
+import { upsertTopic } from "../progress/topics";
+import { normalizeTopic } from "../utils/topic";
 
 const PRACTICE_MAX_TOKENS = 2500;
 
@@ -43,7 +51,7 @@ export async function answerPracticeQuestion(
   questionId: string,
   answer: string,
 ): Promise<PracticeEvaluation> {
-  const session = getValidPracticeSession(sessionId, userId);
+  const session = await getValidPracticeSession(sessionId, userId);
   const question = session.questions.find((q) => q.id === questionId);
   if (question === undefined) {
     throw new AppError(
@@ -58,6 +66,7 @@ export async function answerPracticeQuestion(
 
   if (existing === undefined) {
     session.answers.set(questionId, { questionId, answer, correct });
+    await savePracticeSession(session);
   }
 
   return {
@@ -72,7 +81,7 @@ export async function completePracticeSession(
   userId: string,
   sessionId: string,
 ): Promise<PracticeResult> {
-  const session = getValidPracticeSession(sessionId, userId);
+  const session = await getValidPracticeSession(sessionId, userId);
 
   const totalQuestions = session.questions.length;
   const answered = [...session.answers.values()];
@@ -96,9 +105,9 @@ export async function completePracticeSession(
     },
   );
 
-  return {
+  const result: PracticeResult = {
     sessionId: session.sessionId,
-    topic: session.topic,
+    topic: normalizeTopic(session.topic),
     totalQuestions,
     correctAnswers,
     incorrectAnswers,
@@ -106,4 +115,59 @@ export async function completePracticeSession(
     score: correctAnswers,
     results,
   };
+
+  await persistPracticeResult(userId, session, result);
+  await upsertTopic(result.topic);
+
+  return result;
+}
+
+async function persistPracticeResult(
+  userId: string,
+  session: PracticeSessionRecord,
+  result: PracticeResult,
+): Promise<void> {
+  const enrichedResults: PracticeHistoryResultRow[] = session.questions.map(
+    (question: InternalPracticeQuestion) => {
+      const recorded = session.answers.get(question.id);
+      return {
+        questionId: question.id,
+        question: question.question,
+        type: question.type,
+        correct: recorded?.correct ?? false,
+        answer: recorded?.answer ?? "",
+        correctAnswer: question.correctAnswer,
+        explanation: question.explanation,
+      };
+    },
+  );
+
+  try {
+    await prisma.practiceSession.create({
+      data: {
+        id: session.sessionId,
+        userId,
+        topic: result.topic,
+        questionCount: session.config.questionCount,
+        difficulty: session.config.difficulty,
+        questionType: session.config.questionType,
+        totalQuestions: result.totalQuestions,
+        correctAnswers: result.correctAnswers,
+        incorrectAnswers: result.incorrectAnswers,
+        accuracy: result.accuracy,
+        score: result.score,
+        results: enrichedResults as unknown as Prisma.InputJsonValue,
+      },
+    });
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "P2002"
+    ) {
+      return;
+    }
+    throw error;
+  }
 }

@@ -1,3 +1,4 @@
+import type { GroundingContext } from "../../rag/types";
 import type { LanguageModelMessage } from "../ai.types";
 
 const SYSTEM_PROMPT = `You are NoviLearn, an AI learning tutor for students.
@@ -44,10 +45,19 @@ Rules for the shape:
 - "explanation", "example", and "analogy", when present, must be strings. You may use **bold** inline and line breaks between short paragraphs.
 - Any plain text you write stays inside the JSON string values; never output extra text.`;
 
-export function buildTutorMessages(question: string): LanguageModelMessage {
+export function buildTutorMessages(
+  question: string,
+  grounding?: GroundingContext,
+): LanguageModelMessage {
   const trimmed = question.trim();
+
+  let system = SYSTEM_PROMPT;
+  if (grounding !== undefined && grounding.systemContext.trim().length > 0) {
+    system = `${SYSTEM_PROMPT}\n\n===== GROUNDING CONTEXT (use as the primary factual basis) =====\n${grounding.systemContext}`;
+  }
+
   return {
-    system: SYSTEM_PROMPT,
+    system,
     user: `Student question: ${trimmed}\n\nReturn the JSON answer object.`,
   };
 }

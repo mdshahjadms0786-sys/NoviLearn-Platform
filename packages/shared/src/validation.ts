@@ -85,6 +85,12 @@ export const practiceCompleteSchema = z.object({
   sessionId: z.string().trim().min(1).max(512),
 });
 
+export const progressHistoryLimitSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+export const practiceSessionIdParamSchema = z.string().uuid();
+
 export const createApiResponse = <T>(
   data: T,
   meta?: Record<string, unknown>,
