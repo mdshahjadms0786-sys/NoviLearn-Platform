@@ -59,6 +59,9 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/novilearn?schema=public
         run: pnpm exec prisma migrate deploy
 
+      - name: Set CI test environment
+        run: echo "JWT_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
       - name: Guard against TypeScript files
         run: |
           TS=$(git ls-files '*.ts' '*.tsx' ':!**/*.d.ts' || true)
@@ -70,6 +73,9 @@ jobs:
 
       - name: Lint
         run: pnpm -r run lint
+
+      - name: Format check
+        run: pnpm format:check
 
       - name: Build web
         run: pnpm -r run build
