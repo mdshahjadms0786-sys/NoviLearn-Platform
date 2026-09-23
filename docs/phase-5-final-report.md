@@ -6,41 +6,41 @@
 
 ### Added
 
-| File | Purpose |
-| --- | --- |
-| `apps/api/src/ai/ai.types.ts` | Provider/LM interfaces: `LanguageModelMessage`, `LanguageModelConfig`, `AiProvider`, `AiCompletionInput`, `ProviderRawContent` |
-| `apps/api/src/ai/ai.service.ts` | AI Tutor orchestration (config guard → provider call → normalization) |
-| `apps/api/src/ai/normalizer.ts` | Validates & normalizes raw provider JSON into a shared `LearningResponse` |
-| `apps/api/src/ai/prompts/system.ts` | System prompt + `buildTutorMessages(question)` |
-| `apps/api/src/ai/providers/openai.provider.ts` | OpenAI chat-completions provider via native `fetch` |
-| `apps/api/src/ai/providers/index.ts` | Provider registry / `createProvider(name)` factory |
-| `apps/api/src/controllers/ai.controller.ts` | `POST /ai/learn` handler |
-| `apps/api/src/routes/ai.routes.ts` | `/ai` router with protection middleware chain |
-| `apps/api/src/utils/dedupe.ts` | Success-only duplicate-question guard |
-| `apps/web/src/components/ai/ai-tutor.tsx` | Web AI Tutor (input, loading, error/retry, success states) |
-| `apps/web/src/components/ai/ai-response.tsx` | Web structured response renderer |
-| `apps/web/src/components/ai/markdown.tsx` | Web markdown-lite renderer (no `dangerouslySetInnerHTML`) |
-| `apps/mobile/src/components/ai/ai-tutor.tsx` | Mobile AI Tutor |
-| `apps/mobile/src/components/ai/ai-response.tsx` | Mobile structured response renderer |
-| `apps/mobile/src/components/ai/markdown.tsx` | Mobile markdown-lite renderer (nested `Text`) |
-| `docs/phase-5-final-report.md` | This report |
+| File                                            | Purpose                                                                                                                        |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/api/src/ai/ai.types.ts`                   | Provider/LM interfaces: `LanguageModelMessage`, `LanguageModelConfig`, `AiProvider`, `AiCompletionInput`, `ProviderRawContent` |
+| `apps/api/src/ai/ai.service.ts`                 | AI Tutor orchestration (config guard → provider call → normalization)                                                          |
+| `apps/api/src/ai/normalizer.ts`                 | Validates & normalizes raw provider JSON into a shared `LearningResponse`                                                      |
+| `apps/api/src/ai/prompts/system.ts`             | System prompt + `buildTutorMessages(question)`                                                                                 |
+| `apps/api/src/ai/providers/openai.provider.ts`  | OpenAI chat-completions provider via native `fetch`                                                                            |
+| `apps/api/src/ai/providers/index.ts`            | Provider registry / `createProvider(name)` factory                                                                             |
+| `apps/api/src/controllers/ai.controller.ts`     | `POST /ai/learn` handler                                                                                                       |
+| `apps/api/src/routes/ai.routes.ts`              | `/ai` router with protection middleware chain                                                                                  |
+| `apps/api/src/utils/dedupe.ts`                  | Success-only duplicate-question guard                                                                                          |
+| `apps/web/src/components/ai/ai-tutor.tsx`       | Web AI Tutor (input, loading, error/retry, success states)                                                                     |
+| `apps/web/src/components/ai/ai-response.tsx`    | Web structured response renderer                                                                                               |
+| `apps/web/src/components/ai/markdown.tsx`       | Web markdown-lite renderer (no `dangerouslySetInnerHTML`)                                                                      |
+| `apps/mobile/src/components/ai/ai-tutor.tsx`    | Mobile AI Tutor                                                                                                                |
+| `apps/mobile/src/components/ai/ai-response.tsx` | Mobile structured response renderer                                                                                            |
+| `apps/mobile/src/components/ai/markdown.tsx`    | Mobile markdown-lite renderer (nested `Text`)                                                                                  |
+| `docs/phase-5-final-report.md`                  | This report                                                                                                                    |
 
 ### Changed
 
-| File | Change |
-| --- | --- |
-| `packages/types/src/index.ts` | Added `AiProviderName`, `AiConfig`, `LearningQuestion`, `LearningResponse`, `LearningResponseSection`, `LearningSectionType`; added `ai: AiConfig` to `AppConfig` |
-| `packages/shared/src/validation.ts` | Added `learningQuestionSchema` (trim, 2–1000 chars) |
-| `apps/api/src/config.ts` | Added `aiProvider`, `aiApiKey`, `aiModel` env parsing + `parseAiProvider()`; exposes `config.ai` |
-| `apps/api/src/utils/rate-limit.ts` | Added optional `keyFor(req)` so limits can key on the user id |
-| `apps/api/src/index.ts` | Mounted `/ai` router |
-| `.env.example` | Replaced dummy OPENAI/ANTHROPIC placeholders with `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL` |
-| `apps/web/src/lib/api.ts` | Added `aiApi.learn(token, { question })` |
-| `apps/web/src/app/(app)/learn/page.tsx` | Replaced ComingSoon with `<Suspense>`-wrapped AI Tutor; prefills `?q=` |
-| `apps/web/src/components/dashboard/learning-entry.tsx` | Now navigates to `/learn?q=<question>` (no fake "coming soon" note) |
-| `apps/mobile/src/lib/api.ts` | Added `aiApi.learn(token, { question })` |
-| `apps/mobile/src/app/learn.tsx` | Replaced ComingSoon with AI Tutor inside AppShell; prefills `?q=` via `useLocalSearchParams` |
-| `apps/mobile/src/components/dashboard/learning-entry.tsx` | Now navigates to `/learn?q=<question>` |
+| File                                                      | Change                                                                                                                                                            |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/types/src/index.ts`                             | Added `AiProviderName`, `AiConfig`, `LearningQuestion`, `LearningResponse`, `LearningResponseSection`, `LearningSectionType`; added `ai: AiConfig` to `AppConfig` |
+| `packages/shared/src/validation.ts`                       | Added `learningQuestionSchema` (trim, 2–1000 chars)                                                                                                               |
+| `apps/api/src/config.ts`                                  | Added `aiProvider`, `aiApiKey`, `aiModel` env parsing + `parseAiProvider()`; exposes `config.ai`                                                                  |
+| `apps/api/src/utils/rate-limit.ts`                        | Added optional `keyFor(req)` so limits can key on the user id                                                                                                     |
+| `apps/api/src/index.ts`                                   | Mounted `/ai` router                                                                                                                                              |
+| `.env.example`                                            | Replaced dummy OPENAI/ANTHROPIC placeholders with `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`                                                                         |
+| `apps/web/src/lib/api.ts`                                 | Added `aiApi.learn(token, { question })`                                                                                                                          |
+| `apps/web/src/app/(app)/learn/page.tsx`                   | Replaced ComingSoon with `<Suspense>`-wrapped AI Tutor; prefills `?q=`                                                                                            |
+| `apps/web/src/components/dashboard/learning-entry.tsx`    | Now navigates to `/learn?q=<question>` (no fake "coming soon" note)                                                                                               |
+| `apps/mobile/src/lib/api.ts`                              | Added `aiApi.learn(token, { question })`                                                                                                                          |
+| `apps/mobile/src/app/learn.tsx`                           | Replaced ComingSoon with AI Tutor inside AppShell; prefills `?q=` via `useLocalSearchParams`                                                                      |
+| `apps/mobile/src/components/dashboard/learning-entry.tsx` | Now navigates to `/learn?q=<question>`                                                                                                                            |
 
 ## 2. Dependencies Added
 
@@ -76,15 +76,15 @@ raw JSON  →  normalizer.ts  →  shared LearningResponse
 
 `POST /ai/learn`
 
-| Case | Status | Body |
-| --- | --- | --- |
-| Success | `200` | `{ success, data: LearningResponse, meta }` |
-| Missing/invalid token | `401` | `UNAUTHORIZED` |
-| Invalid question (validation) | `400` | `VALIDATION_ERROR` + field details |
-| Repeated identical successful question | `429` | `RATE_LIMITED` |
-| Per-user rate limit exceeded (20/10 min) | `429` | `RATE_LIMITED` |
-| Provider not configured | `503` | `AI_PROVIDER_NOT_CONFIGURED` |
-| Provider call failed / malformed response | `502` | `AI_PROVIDER_ERROR` |
+| Case                                      | Status | Body                                        |
+| ----------------------------------------- | ------ | ------------------------------------------- |
+| Success                                   | `200`  | `{ success, data: LearningResponse, meta }` |
+| Missing/invalid token                     | `401`  | `UNAUTHORIZED`                              |
+| Invalid question (validation)             | `400`  | `VALIDATION_ERROR` + field details          |
+| Repeated identical successful question    | `429`  | `RATE_LIMITED`                              |
+| Per-user rate limit exceeded (20/10 min)  | `429`  | `RATE_LIMITED`                              |
+| Provider not configured                   | `503`  | `AI_PROVIDER_NOT_CONFIGURED`                |
+| Provider call failed / malformed response | `502`  | `AI_PROVIDER_ERROR`                         |
 
 Middleware chain order: `authenticate → AI_LIMITER (keyed by user.id) → validate → AI_DUPLICATE_GUARD → learnController`.
 
@@ -94,12 +94,33 @@ Defined in `packages/types` (types) and `packages/shared` (zod):
 
 ```ts
 // types
-type AiProviderName = 'openai';
-interface AiConfig { provider: AiProviderName | ''; apiKey: string; model: string; }
-type LearningSectionType = 'summary'|'explanation'|'key_points'|'example'|'analogy'|'follow_ups';
-interface LearningQuestion { question: string; }
-interface LearningResponseSection { type; title; content?; items?; }
-interface LearningResponse { question: string; sections: LearningResponseSection[]; disclaimer?: string; }
+type AiProviderName = "openai";
+interface AiConfig {
+  provider: AiProviderName | "";
+  apiKey: string;
+  model: string;
+}
+type LearningSectionType =
+  | "summary"
+  | "explanation"
+  | "key_points"
+  | "example"
+  | "analogy"
+  | "follow_ups";
+interface LearningQuestion {
+  question: string;
+}
+interface LearningResponseSection {
+  type;
+  title;
+  content?;
+  items?;
+}
+interface LearningResponse {
+  question: string;
+  sections: LearningResponseSection[];
+  disclaimer?: string;
+}
 
 // shared (zod)
 export const learningQuestionSchema = z.object({
@@ -161,14 +182,14 @@ Commands (all passed):
 
 Live API tests (against the running dev server on `:3001`):
 
-| Test | Result |
-| --- | --- |
-| `POST /ai/learn` no token | `401` UNAUTHORIZED ✓ |
-| `POST /ai/learn` `{"question":"x"}` (authed) | `400` VALIDATION_ERROR ✓ |
-| `POST /ai/learn` valid question (authed) | `503` AI_PROVIDER_NOT_CONFIGURED ✓ (no key configured) |
-| Identical question repeated immediately | 2nd attempt also `503` (NOT `429`) ✓ — confirms duplicate guard only blocks successful responses |
-| `POST /auth/signup` → `GET /auth/me` | `200`, correct user ✓ |
-| `POST /auth/logout` → `POST /ai/learn` + `GET /auth/me` | `401` after logout ✓ |
+| Test                                                    | Result                                                                                           |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `POST /ai/learn` no token                               | `401` UNAUTHORIZED ✓                                                                             |
+| `POST /ai/learn` `{"question":"x"}` (authed)            | `400` VALIDATION_ERROR ✓                                                                         |
+| `POST /ai/learn` valid question (authed)                | `503` AI_PROVIDER_NOT_CONFIGURED ✓ (no key configured)                                           |
+| Identical question repeated immediately                 | 2nd attempt also `503` (NOT `429`) ✓ — confirms duplicate guard only blocks successful responses |
+| `POST /auth/signup` → `GET /auth/me`                    | `200`, correct user ✓                                                                            |
+| `POST /auth/logout` → `POST /ai/learn` + `GET /auth/me` | `401` after logout ✓                                                                             |
 
 ## 12. Known Warnings
 

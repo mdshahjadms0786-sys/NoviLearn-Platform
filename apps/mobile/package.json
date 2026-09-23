@@ -9,9 +9,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "eslint src --ext .ts,.tsx",
-    "lint:fix": "eslint src --ext .ts,.tsx --fix",
-    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .js,.jsx",
+    "lint:fix": "eslint src --ext .js,.jsx --fix",
     "clean": "rm -rf node_modules .expo dist"
   },
   "dependencies": {
@@ -48,11 +47,8 @@
   },
   "devDependencies": {
     "@novilearn/config": "workspace:*",
-    "@types/react": "~18.3.8",
-    "@types/react-native": "^0.73.0",
     "babel-preset-expo": "^12.0.12",
     "eslint": "^9.10.0",
-    "tailwindcss": "^3.4.11",
-    "typescript": "^5.6.2"
+    "tailwindcss": "^3.4.11"
   }
 }

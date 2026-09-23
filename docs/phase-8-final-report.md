@@ -33,10 +33,10 @@ Turn the `/progress` coming-soon screens into a real progress surface backed by 
 
 Two new models were added in `apps/api/prisma/schema.prisma` and pushed with `prisma db push`:
 
-| Model              | Table                 | Key columns                                                                                                    | Indexes                                            |
-| ------------------ | --------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `LearningActivity` | `learning_activities` | `id`, `userId`, `topic`, `type` (default `"learn"`), `metadata` (Json?), `createdAt`                          | `(userId, createdAt desc)`, `(userId, topic)`       |
-| `PracticeSession`  | `practice_sessions`   | `id`, `userId`, `topic`, `questionCount`, `difficulty`, `questionType`, `totalQuestions`, `correctAnswers`, `incorrectAnswers`, `accuracy`, `score`, `results` (Json), `completedAt` | `(userId, completedAt desc)`, `(userId, topic)`     |
+| Model              | Table                 | Key columns                                                                                                                                                                          | Indexes                                         |
+| ------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| `LearningActivity` | `learning_activities` | `id`, `userId`, `topic`, `type` (default `"learn"`), `metadata` (Json?), `createdAt`                                                                                                 | `(userId, createdAt desc)`, `(userId, topic)`   |
+| `PracticeSession`  | `practice_sessions`   | `id`, `userId`, `topic`, `questionCount`, `difficulty`, `questionType`, `totalQuestions`, `correctAnswers`, `incorrectAnswers`, `accuracy`, `score`, `results` (Json), `completedAt` | `(userId, completedAt desc)`, `(userId, topic)` |
 
 Both have `user User @relation(..., onDelete: Cascade)`, and `User` gained the back-relations `learningActivities` / `practiceSessions`. The `results` JSON stores the enriched per-question breakdown (`questionId`, `question`, `type`, `correct`, `answer`, `correctAnswer`, `explanation`) so history detail can render question text and correct answers without re-calling the AI.
 
@@ -71,11 +71,11 @@ Added the progress/personalization contract:
 
 ### API — progress engine (`apps/api/src/progress`)
 
-| File                   | Purpose                                                                                              |
-| ---------------------- | ---------------------------------------------------------------------------------------------------- |
-| `calculations.ts`      | Pure `computeMastery(stats)` and `computeTopicProgress(stats)` functions                              |
-| `personalization.ts`   | Pure `buildSuggestions(input)` → ordered `NextLearningSuggestion[]`                                   |
-| `progress.service.ts`  | DB reads/aggregation, topic normalization, `recordLearningActivity`, history + summary + suggestions |
+| File                  | Purpose                                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------------------- |
+| `calculations.ts`     | Pure `computeMastery(stats)` and `computeTopicProgress(stats)` functions                             |
+| `personalization.ts`  | Pure `buildSuggestions(input)` → ordered `NextLearningSuggestion[]`                                  |
+| `progress.service.ts` | DB reads/aggregation, topic normalization, `recordLearningActivity`, history + summary + suggestions |
 
 `normalizeTopic` collapses whitespace, trims, lowercases, and caps topics at 500 chars so learning and practice topics deduplicate consistently.
 
@@ -83,14 +83,14 @@ Added the progress/personalization contract:
 
 All routes require a Bearer token and share a per-user in-memory rate limiter (300 requests / 10 minutes):
 
-| Method | Path                            | Returns                              |
-| ------ | ------------------------------- | ------------------------------------ |
-| GET    | `/progress/summary`             | `ProgressSummary`                    |
-| GET    | `/progress/history/learning`    | `LearningActivity[]` (`?limit=1..100`) |
-| GET    | `/progress/history/practice`    | `PracticeSessionSummary[]` (`?limit`) |
-| GET    | `/progress/history/practice/:id`| `PracticeSessionDetail` (owner only) |
-| GET    | `/progress/topics`              | `TopicProgress[]`                    |
-| GET    | `/progress/suggestions`         | `NextLearningSuggestion[]`           |
+| Method | Path                             | Returns                                |
+| ------ | -------------------------------- | -------------------------------------- |
+| GET    | `/progress/summary`              | `ProgressSummary`                      |
+| GET    | `/progress/history/learning`     | `LearningActivity[]` (`?limit=1..100`) |
+| GET    | `/progress/history/practice`     | `PracticeSessionSummary[]` (`?limit`)  |
+| GET    | `/progress/history/practice/:id` | `PracticeSessionDetail` (owner only)   |
+| GET    | `/progress/topics`               | `TopicProgress[]`                      |
+| GET    | `/progress/suggestions`          | `NextLearningSuggestion[]`             |
 
 Error contract: `401 UNAUTHORIZED` (no/invalid token), `400 VALIDATION_ERROR` (bad `limit` or non-UUID id), `404 PRACTICE_SESSION_NOT_FOUND` (missing or another user's session), `429 RATE_LIMITED`.
 
@@ -220,14 +220,14 @@ Two committed `tsx` scripts under `apps/api/scripts/` (no test runner exists in 
 
 ## 13. Verification: Static Gates
 
-| Command                                                                          | Result                                                                                          |
-| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `pnpm -r run typecheck` (types, shared, design-tokens, api, web, mobile)         | Pass (7 projects)                                                                               |
-| `pnpm -r run lint`                                                               | Pass — only the pre-existing `no-console` warning in `apps/api/src/index.ts:122` (intentional)  |
-| `pnpm --filter=@novilearn/api exec prisma validate`                              | Pass — schema valid                                                                             |
-| `prettier --check` on all Phase 8 files                                          | Pass for all Phase 8 files (repo-wide check still flags pre-existing files — see §16)           |
-| `pnpm run build:web` (`next build`)                                              | Pass — 12 routes; `/progress` 6.01 kB (124 kB First Load JS)                                    |
-| `pnpm --filter=@novilearn/mobile exec expo export --platform android`            | Pass — android Hermes bundle exported                                                           |
+| Command                                                                  | Result                                                                                         |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `pnpm -r run typecheck` (types, shared, design-tokens, api, web, mobile) | Pass (7 projects)                                                                              |
+| `pnpm -r run lint`                                                       | Pass — only the pre-existing `no-console` warning in `apps/api/src/index.ts:122` (intentional) |
+| `pnpm --filter=@novilearn/api exec prisma validate`                      | Pass — schema valid                                                                            |
+| `prettier --check` on all Phase 8 files                                  | Pass for all Phase 8 files (repo-wide check still flags pre-existing files — see §16)          |
+| `pnpm run build:web` (`next build`)                                      | Pass — 12 routes; `/progress` 6.01 kB (124 kB First Load JS)                                   |
+| `pnpm --filter=@novilearn/mobile exec expo export --platform android`    | Pass — android Hermes bundle exported                                                          |
 
 ## 14. Verification: Unit Script
 

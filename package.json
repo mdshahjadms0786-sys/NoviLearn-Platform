@@ -10,13 +10,10 @@
     "dev:all": "pnpm run dev & pnpm run dev:web & pnpm run dev:mobile",
     "build": "pnpm -r run build",
     "build:web": "pnpm --filter=@novilearn/web build",
-    "build:api": "pnpm --filter=@novilearn/api build",
-    "build:mobile": "pnpm --filter=@novilearn/mobile build",
     "lint": "pnpm -r run lint",
     "lint:fix": "pnpm -r run lint:fix",
-    "typecheck": "pnpm -r run typecheck",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css,scss}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css,scss}\"",
+    "format": "prettier --write \"**/*.{js,jsx,json,md,css,scss}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,json,md,css,scss}\"",
     "db:generate": "pnpm --filter=@novilearn/api db:generate",
     "db:push": "pnpm --filter=@novilearn/api db:push",
     "db:studio": "pnpm --filter=@novilearn/api db:studio",
@@ -24,14 +21,10 @@
     "prepare": "husky install"
   },
   "devDependencies": {
-    "@types/node": "^22.5.0",
     "eslint": "^9.10.0",
-    "eslint-import-resolver-typescript": "^4.4.5",
-    "hermes-parser": "0.25.1",
     "husky": "^9.1.6",
     "prettier": "^3.3.3",
-    "turbo": "^2.1.2",
-    "typescript": "^5.6.2"
+    "turbo": "^2.1.2"
   },
   "engines": {
     "node": ">=22.0.0"

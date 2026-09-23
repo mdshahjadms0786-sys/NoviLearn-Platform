@@ -2,15 +2,13 @@
   "name": "@novilearn/api",
   "version": "0.0.1",
   "private": true,
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "type": "module",
+  "main": "./src/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node --import tsx dist/index.js",
-    "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
-    "typecheck": "tsc --noEmit",
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "lint": "eslint src --ext .js",
+    "lint:fix": "eslint src --ext .js --fix",
     "db:generate": "prisma generate",
     "db:deploy": "prisma migrate deploy",
     "db:diff": "prisma migrate diff",
@@ -34,13 +32,6 @@
   },
   "devDependencies": {
     "@novilearn/config": "workspace:*",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/morgan": "^1.9.9",
-    "@types/node": "^22.5.0",
-    "prisma": "^5.20.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.6.2"
+    "prisma": "^5.20.0"
   }
 }

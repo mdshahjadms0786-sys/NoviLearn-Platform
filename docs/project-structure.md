@@ -9,6 +9,8 @@ NoviLearn/
 ├── docs/                    # Documentation
 ├── .env.example             # Environment variable template
 ├── .gitignore               # Git ignore rules
+├── Dockerfile               # Production API container
+├── docker-compose.yml       # Postgres 18 + API stack
 ├── package.json             # Root package.json with workspace scripts
 ├── pnpm-workspace.yaml      # pnpm workspace configuration
 ├── pnpm-lock.yaml           # Lockfile
@@ -17,63 +19,90 @@ NoviLearn/
 
 ## Applications
 
+> This is a **pure JavaScript** monorepo — no TypeScript anywhere. All source
+> files are `.js`/`.jsx`. The API and the shared packages run directly from
+> `src` on Node.js ESM (no build/compile step); web/mobile are bundled at
+> build time by Next.js/Expo (Metro).
+
 ### apps/api - Express Backend API
 
 ```
 apps/api/
 ├── src/
-│   ├── index.ts             # Entry point, Express app setup, error handler, /auth + /ai + /practice + /progress router mounts
-│   ├── config.ts            # Environment-derived config (port, urls, jwt, ai)
-│   ├── env.ts               # .env loader + zod schema validation
-│   ├── prisma.ts            # Prisma Client singleton
-│   ├── errors.ts            # AppError class
+│   ├── index.js             # Entry point, Express app setup, error handler, /auth + /ai + /practice + /progress router mounts
+│   ├── config.js            # Environment-derived config (port, urls, jwt, ai)
+│   ├── env.js               # .env loader + zod schema validation
+│   ├── prisma.js            # Prisma Client singleton
+│   ├── errors.js            # AppError class
+│   ├── observability/
+│   │   └── error-tracking.js # Sentry init + error capture (guarded, optional DSN)
 │   ├── ai/
-│   │   ├── ai.types.ts      # Provider/LM interfaces + AI completion input types
-│   │   ├── ai.service.ts    # AI orchestration (config guard → provider → normalize) + shared completion helper
-│   │   ├── normalizer.ts    # Provider JSON → shared LearningResponse normalization
+│   │   ├── ai.types.js      # Provider/LM shape docs + AI completion input
+│   │   ├── ai.service.js    # AI orchestration (config guard → provider → normalize) + shared completion helper
+│   │   ├── normalizer.js    # Provider JSON → shared LearningResponse normalization
 │   │   ├── prompts/
-│   │   │   ├── system.ts    # System prompt + tutor message builder
-│   │   │   └── practice.ts  # Practice question generation prompt + message builder
+│   │   │   ├── system.js    # System prompt + tutor message builder
+│   │   │   └── practice.js  # Practice question generation prompt + message builder
+│   │   ├── embeddings/
+│   │   │   ├── service.js   # Embedding provider abstraction + backfill
+│   │   │   ├── local.js     # Local deterministic embeddings (offline/safe default)
+│   │   │   └── providers/openai.embeddings.js # OpenAI embeddings via fetch
 │   │   └── providers/
-│   │       ├── openai.provider.ts # OpenAI chat-completions via fetch
-│   │       └── index.ts     # Provider registry/factory
+│   │       ├── openai.provider.js # OpenAI chat-completions via fetch
+│   │       ├── anthropic.provider.js # Anthropic messages API via fetch
+│   │       └── index.js     # Provider registry/factory
 │   ├── practice/
-│   │   ├── practice.types.ts    # Internal practice session types + payload mappers
-│   │   ├── practice.service.ts  # Generation, answer scoring, session completion
-│   │   ├── practice.normalizer.ts # Provider JSON → internal questions normalization
-│   │   ├── evaluator.ts     # Answer evaluation (mcq / true-false / short answer)
-│   │   ├── session-store.ts # In-memory ephemeral session store (60-min TTL, per-user cap)
-│   │   └── text.ts          # Answer/text normalization helpers
+│   │   ├── practice.types.js    # Internal practice session shapes + payload mappers
+│   │   ├── practice.service.js  # Generation, answer scoring, session completion
+│   │   ├── practice.normalizer.js # Provider JSON → internal questions normalization
+│   │   ├── evaluator.js     # Answer evaluation (mcq / true-false / short answer)
+│   │   ├── session-store.js # In-memory ephemeral session store (60-min TTL, per-user cap)
+│   │   └── text.js          # Answer/text normalization helpers
 │   ├── progress/
-│   │   ├── calculations.ts  # Pure mastery + topic-progress computation
-│   │   ├── personalization.ts # Pure next-learning suggestion builder
-│   │   └── progress.service.ts # DB aggregation, activity recording, history/summary/suggestions
+│   │   ├── calculations.js  # Pure mastery + topic-progress computation
+│   │   ├── personalization.js # Pure next-learning suggestion builder
+│   │   ├── topics.js        # Topic normalization helpers
+│   │   └── progress.service.js # DB aggregation, activity recording, history/summary/suggestions
+│   ├── rag/
+│   │   ├── chunking.js      # Text chunking + checksums
+│   │   ├── vectors.js       # cosine similarity / vector helpers
+│   │   ├── vector-store.js  # Prisma-backed vector store
+│   │   ├── ingestion.js     # Knowledge import pipeline
+│   │   ├── context.js       # Retrieval + grounding context builder
+│   │   ├── personal-context.js # Owner-scoped context builder
+│   │   ├── rag.service.js   # RAG orchestration (best-effort retrieval)
+│   │   └── types.js         # KnowledgeSource shapes
 │   ├── routes/
-│   │   ├── auth.routes.ts   # /auth routes
-│   │   ├── ai.routes.ts     # /ai routes (learn endpoint + protection middleware)
-│   │   ├── practice.routes.ts # /practice routes (generate/answer/complete + limits)
-│   │   └── progress.routes.ts # /progress routes (summary/history/topics/suggestions + limits)
+│   │   ├── auth.routes.js   # /auth routes
+│   │   ├── ai.routes.js     # /ai routes (learn endpoint + protection middleware)
+│   │   ├── practice.routes.js # /practice routes (generate/answer/complete + limits)
+│   │   └── progress.routes.js # /progress routes (summary/history/topics/suggestions + limits)
 │   ├── controllers/
-│   │   ├── auth.controller.ts  # Auth request handlers
-│   │   ├── ai.controller.ts    # AI request handlers (+ records learning activity)
-│   │   ├── practice.controller.ts # Practice request handlers
-│   │   └── progress.controller.ts # Progress request handlers
-│   ├── scripts/             # Committed verification scripts (phase8 unit/integration/db checks)
+│   │   ├── auth.controller.js  # Auth request handlers
+│   │   ├── ai.controller.js    # AI request handlers (+ records learning activity)
+│   │   ├── practice.controller.js # Practice request handlers
+│   │   └── progress.controller.js # Progress request handlers
 │   ├── services/
-│   │   └── auth.service.ts  # Business logic (signup, login, me, logout)
+│   │   └── auth.service.js  # Business logic (signup, login, me, logout)
 │   ├── middleware/
-│   │   └── auth.ts          # requireAuth (JWT verification + version check)
+│   │   └── auth.js          # requireAuth (JWT verification + version check)
 │   ├── validators/
-│   │   └── auth.ts          # Zod request validators
+│   │   ├── auth.js          # Zod request validators
+│   │   └── practice.js      # Practice request validators
 │   └── utils/
-│       ├── async-handler.ts # Async route wrapper
-│       ├── rate-limit.ts    # In-memory rate limiter (IP or custom key)
-│       └── dedupe.ts        # Success-only duplicate-question guard
+│       ├── async-handler.js # Async route wrapper
+│       ├── rate-limit.js    # In-memory rate limiter (IP or custom key)
+│       ├── dedupe.js        # Success-only duplicate-question guard
+│       └── topic.js         # slugifyTopic helper
+├── scripts/                 # Committed verification suites + CLI tools (run with plain node)
+│   ├── phase8-unit-tests.js / phase8-integration-tests.js
+│   ├── phase9-unit-tests.js / phase9-integration-tests.js
+│   ├── phase10-unit-tests.js / phase10-integration-tests.js / phase10-restart-check.js / phase10-cleanup.js
+│   └── ingest-knowledge.js  # RAG knowledge ingestion CLI
 ├── prisma/
-│   └── schema.prisma        # Database schema
-├── dist/                    # Compiled output (gitignored)
+│   ├── schema.prisma        # Database schema
+│   └── migrations/          # Version-controlled migrations
 ├── package.json
-├── tsconfig.json
 ├── eslint.config.js
 └── .env                     # Local env (gitignored)
 ```
@@ -84,19 +113,19 @@ apps/api/
 apps/web/
 ├── src/
 │   ├── app/                 # App Router pages
-│   │   ├── layout.tsx       # Root layout
-│   │   ├── page.tsx         # Landing page (+ authenticated redirect to /home)
+│   │   ├── layout.jsx       # Root layout
+│   │   ├── page.jsx         # Landing page (+ authenticated redirect to /home)
 │   │   ├── globals.css      # Global styles + theme tokens
 │   │   ├── design-system/   # Design system showcase
 │   │   ├── login/           # Sign in page
 │   │   ├── signup/          # Create account page
 │   │   └── (app)/           # Authenticated app shell route group
-│   │       ├── layout.tsx   # ProtectedRoute + AppShell wrapper
-│       │       ├── home/        # Student Home dashboard
-│       │       ├── learn/       # AI Tutor page
-│       │       ├── practice/    # Practice session page (config → questions → results)
-│       │       ├── progress/    # Progress dashboard (stats, activity, topics, history, suggestions)
-│       │       └── account/     # Profile page (inside the shell)
+│   │       ├── layout.jsx   # ProtectedRoute + AppShell wrapper
+│   │       ├── home/        # Student Home dashboard
+│   │       ├── learn/       # AI Tutor page
+│   │       ├── practice/    # Practice session page (config → questions → results)
+│   │       ├── progress/    # Progress dashboard (stats, activity, topics, history, suggestions)
+│   │       └── account/     # Profile page (inside the shell)
 │   ├── components/
 │   │   ├── ui/              # UI component library (shadcn/ui + Radix)
 │   │   ├── auth/            # Auth-shell, auth-links, authenticated-redirect
@@ -107,21 +136,21 @@ apps/web/
 │   │   ├── practice/        # PracticeTutor flow + setup/question/feedback/result views
 │   │   ├── progress/        # ProgressDashboard + stats/activity/topics/history/suggestion views
 │   │   ├── placeholder/     # ComingSoon
-│   │   └── protected-route.tsx  # Auth-gated route wrapper
+│   │   ├── theme-toggle.jsx # Light/dark theme toggle
+│   │   └── protected-route.jsx  # Auth-gated route wrapper
 │   ├── lib/
-│   │   ├── api.ts           # Typed API client (authApi, aiApi, practiceApi, progressApi)
-│   │   ├── auth-store.ts    # Zustand auth store (localStorage persistence)
-│   │   ├── use-auth.ts      # useAuth hook
-│   │   └── utils.ts         # Utility functions (cn, etc.)
-│   ├── hooks/               # Custom React hooks (future)
-│   ├── types/               # Web-specific types (future)
-│   └── styles/              # Additional styles (future)
+│   │   ├── api.js           # API client (authApi, aiApi, practiceApi, progressApi)
+│   │   ├── auth-store.js    # Zustand auth store (localStorage persistence)
+│   │   ├── auth-events.js   # Cross-tab auth event bus
+│   │   ├── use-auth.js      # useAuth hook
+│   │   └── utils.js         # Utility functions (cn, etc.)
+│   └── hooks/               # Custom React hooks (future)
 ├── public/                  # Static assets
 ├── .next/                   # Build output (gitignored)
 ├── package.json
-├── tsconfig.json
-├── next.config.ts
-├── tailwind.config.ts
+├── jsconfig.json            # "@/*" → "./src/*" path alias (JS replacement for tsconfig paths)
+├── next.config.js           # CJS Next.js config (transpilePackages, outputFileTracingRoot)
+├── tailwind.config.js       # CJS Tailwind config (loads @novilearn/design-tokens)
 ├── postcss.config.js
 ├── eslint.config.js
 └── .env                     # Local env (gitignored)
@@ -133,13 +162,14 @@ apps/web/
 apps/mobile/
 ├── src/
 │   ├── app/                 # Expo Router pages
-│   │   ├── index.tsx        # Student Home dashboard (inside AppShell)
-│   │   ├── login.tsx        # Sign in screen
-│   │   ├── signup.tsx       # Create account screen
-│   │   ├── account.tsx      # Profile screen (inside AppShell)
-│   │   ├── learn.tsx        # AI Tutor screen (inside AppShell)
-│   │   ├── practice.tsx     # Practice session screen (inside AppShell)
-│   │   └── progress.tsx     # Progress dashboard screen (inside AppShell)
+│   │   ├── index.jsx        # Student Home dashboard (inside AppShell)
+│   │   ├── login.jsx        # Sign in screen
+│   │   ├── signup.jsx       # Create account screen
+│   │   ├── account.jsx      # Profile screen (inside AppShell)
+│   │   ├── learn.jsx        # AI Tutor screen (inside AppShell)
+│   │   ├── practice.jsx     # Practice session screen (inside AppShell)
+│   │   ├── progress.jsx     # Progress dashboard screen (inside AppShell)
+│   │   └── _layout.jsx      # Root layout (theme provider, safe areas)
 │   ├── components/
 │   │   ├── ui/              # UI component library (RN primitives)
 │   │   ├── auth/            # Auth-screen, form-field
@@ -149,27 +179,25 @@ apps/mobile/
 │   │   ├── practice/        # PracticeFlow + setup/question/feedback/result views
 │   │   ├── progress/        # ProgressDashboard + stats/activity/topics/history/suggestion views
 │   │   ├── placeholder/     # ComingSoon
-│   │   ├── require-auth.tsx # Auth-gated wrapper
-│   │   └── design-system-showcase.tsx  # Mobile component showcase
+│   │   ├── require-auth.jsx # Auth-gated wrapper
+│   │   └── design-system-showcase.jsx  # Mobile component showcase
 │   ├── lib/
-│   │   ├── api.ts           # Typed API client (authApi, aiApi, practiceApi, progressApi)
-│   │   ├── auth-store.ts    # Zustand auth store (AsyncStorage persistence)
-│   │   ├── config.ts        # Env-derived config (API_URL)
-│   │   └── utils.ts         # Utility functions
-│   ├── hooks/               # Custom hooks (future)
-│   ├── providers.tsx        # Context providers
-│   ├── theme-provider.tsx   # Theme context
-│   └── types/               # Mobile-specific types (future)
+│   │   ├── api.js           # API client (authApi, aiApi, practiceApi, progressApi)
+│   │   ├── auth-store.js    # Zustand auth store (AsyncStorage persistence)
+│   │   ├── auth-events.js   # Auth event bus
+│   │   ├── config.js        # Env-derived config (API_URL)
+│   │   └── utils.js         # Utility functions
+│   ├── providers.jsx        # Context providers
+│   ├── theme-provider.jsx   # Theme context (react-native-paper + design tokens)
+│   └── hooks/               # Custom hooks (future)
 ├── assets/                  # Images, fonts
 ├── .expo/                   # Expo cache (gitignored)
-├── dist/                    # Build output (gitignored)
 ├── package.json
-├── tsconfig.json
 ├── app.json                 # Expo config
-├── tailwind.config.js
+├── babel.config.js          # babel-preset-expo + nativewind
+├── metro.config.js          # Monorepo watchFolders + nodeModulesPaths
+├── tailwind.config.js       # NativeWind config
 ├── global.css               # NativeWind styles
-├── nativewind-env.d.ts
-├── expo-env.d.ts
 ├── eslint.config.js
 └── .env                     # Local env (gitignored)
 ```
@@ -181,47 +209,31 @@ apps/mobile/
 ```
 packages/config/
 ├── eslint/
-│   ├── base.js              # Base ESLint config
-│   ├── next.js              # Next.js specific config
-│   └── react-native.js      # React Native specific config
+│   ├── base.js              # Shared flat config (ESLint 9, JSX, Node globals, import/order)
+│   ├── next.js              # Next.js Web-specific additions
+│   └── react-native.js      # React Native-specific additions
 ├── prettier/
 │   └── index.js             # Prettier config
-├── typescript/
-│   ├── base.json            # Base TypeScript config
-│   ├── next.json            # Next.js TypeScript config
-│   ├── react-native.json    # React Native TypeScript config
-│   └── node.json            # Node.js TypeScript config
-├── index.ts                 # Main export
-├── package.json
-└── tsconfig.json
+├── index.js                 # Main export (CommonJS)
+└── package.json
 ```
 
-### packages/types - Shared TypeScript Types
+### packages/types - Shared Type Helpers
 
 ```
 packages/types/
 ├── src/
-│   └── index.ts             # All shared type definitions
-├── dist/                    # Compiled output (gitignored)
-├── package.json
-└── tsconfig.json
+│   └── index.js             # JSDoc-annotated runtime type helpers (ESM)
+└── package.json
 ```
 
-**Key Types:**
+**Key Exports (JSDoc-annotated shape documentation):**
 
-- `UUID` - Branded string type for IDs
-- `ApiResponse<T>` - Standard API response
-- `ApiError` - Standard API error
-- `PaginatedResponse<T>` - Paginated API response
-- `PaginationParams` - Query parameters for pagination
-- `HealthCheckResponse` - Health endpoint response
-- `User` - User domain model
-- `AuthSession` - `{ user, token }` returned by signup/login
-- `LoginInput`, `SignupInput` - Auth form input types
-- `Environment` - Environment enum
-- `LogEntry` - Logging structure
-- `AppConfig` - App configuration shape (now includes `ai: AiConfig`)
-- `AiProviderName`, `AiConfig` - AI provider/model configuration types
+- `uuid(value)` - Identity helper so API contracts expose an explicit UUID field
+- `ApiResponse`, `ApiError`, `PaginatedResponse` - Standard API response/error/pagination shapes (documented in JSDoc)
+- `PaginationParams`, `HealthCheckResponse`, `User`, `AuthSession` shapes
+- `LoginInput`, `SignupInput`, `Environment`, `LogEntry`, `AppConfig` shapes
+- `AiProviderName`, `AiConfig` - AI provider/model configuration shapes
 - `LearningQuestion`, `LearningResponse`, `LearningResponseSection`, `LearningSectionType` - AI Tutor request/response contract
 - `VisualLearning`, `VisualLearningNode`, `VisualLearningEdge`, `VisualLearningType`, plus optional `visualLearning`/`relatedConcepts`/`nextLearning` on `LearningResponse` - Phase 6 learning-experience enrichment
 - `PracticeQuestionType`, `PracticeDifficulty`, `PracticeQuestionMode`, `PracticeConfig`, `PracticeQuestion`, `PracticeSet`, `PracticeAnswerInput`, `PracticeEvaluation`, `PracticeQuestionResult`, `PracticeResult` - Phase 7 practice/quiz/assessment contract
@@ -232,10 +244,8 @@ packages/types/
 ```
 packages/design-tokens/
 ├── src/
-│   └── index.ts             # Design token definitions
-├── dist/                    # Compiled output (gitignored)
-├── package.json
-└── tsconfig.json
+│   └── index.js             # Design token definitions (CommonJS, loaded by Tailwind via require)
+└── package.json
 ```
 
 **Key Exports:**
@@ -246,17 +256,16 @@ packages/design-tokens/
 - `shadows` - Elevation shadow tokens
 - `typography` - Font families, weights, sizes, line heights
 - `iconSizes`, `componentSizes`, `breakpoints`, `zIndex`, `transitions`
+- `designTokens` - Aggregated token bundle
 
 ### packages/shared - Shared Utilities & Validation
 
 ```
 packages/shared/
 ├── src/
-│   ├── validation.ts        # Zod schemas & helpers
-│   └── index.ts             # Main export
-├── dist/                    # Compiled output (gitignored)
-├── package.json
-└── tsconfig.json
+│   ├── validation.js        # Zod schemas & helpers
+│   └── index.js             # Main export (ESM)
+└── package.json
 ```
 
 **Key Exports:**
@@ -266,6 +275,7 @@ packages/shared/
 - `emailSchema`, `passwordSchema`, `nameSchema` - Auth validation
 - `loginSchema`, `signupSchema` - Signup/login form schemas (shared client + server)
 - `learningQuestionSchema` - AI Tutor question validation (trim, 2-1000 chars)
+- `environmentSchema`, `logLevelSchema` - Runtime env/log validation
 - `practiceConfigSchema`, `practiceAnswerSchema`, `practiceCompleteSchema`, `practiceDifficultySchema`, `practiceQuestionTypeSchema`, `practiceQuestionModeSchema` - Practice/quiz request validation
 - `progressHistoryLimitSchema`, `practiceSessionIdParamSchema` - Progress history query/path validation
 - `createApiResponse()` - Success response helper
@@ -285,6 +295,9 @@ docs/
 ├── phase-6-final-report.md  # Phase 6 (Learning Experience & Interactive Learning) delivery report
 ├── phase-7-final-report.md  # Phase 7 (Practice, Quiz & Assessment Foundation) delivery report
 ├── phase-8-final-report.md  # Phase 8 (Progress, Mastery & Personalization) delivery report
+├── phase-9-final-report.md  # Phase 9 (Observability, Reliability & Security) delivery report
+├── phase-10-final-report.md # Phase 10 (Production Readiness, RAG & Personalization) delivery report
+├── phase-11-final-report.md # Phase 11 (TypeScript → JavaScript migration) delivery report
 └── project-structure.md     # This file
 ```
 
@@ -292,20 +305,22 @@ docs/
 
 ### Root Configuration
 
-| File                  | Purpose                            |
-| --------------------- | ---------------------------------- |
-| `package.json`        | Workspace scripts, devDependencies |
-| `pnpm-workspace.yaml` | Workspace package patterns         |
-| `.env.example`        | Environment variable template      |
-| `.gitignore`          | Git ignore patterns                |
+| File                  | Purpose                                                 |
+| --------------------- | ------------------------------------------------------- |
+| `package.json`        | Workspace scripts, devDependencies                      |
+| `pnpm-workspace.yaml` | Workspace package patterns                              |
+| `.env.example`        | Environment variable template                           |
+| `.gitignore`          | Git ignore patterns                                     |
+| `Dockerfile`          | Production API container (`node apps/api/src/index.js`) |
+| `docker-compose.yml`  | Postgres 18 (host port 5433) + API (3001)               |
 
 ### Per-Package Configuration
 
 Each package has:
 
-- `package.json` - Dependencies, scripts
-- `tsconfig.json` - TypeScript configuration (extends @novilearn/config)
-- `eslint.config.js` - ESLint configuration (extends @novilearn/config)
+- `package.json` - Dependencies, scripts (`api`, `shared`, `types`, `design-tokens` are `"type": "module"`; `config` is CommonJS)
+- No `tsconfig.json` anywhere - this is a JavaScript-only repository
+- `eslint.config.js` - ESLint flat configuration (extends @novilearn/config)
 
 ## Dependency Graph
 
@@ -334,35 +349,40 @@ Each package has:
 
 ### Within Apps
 
-```typescript
-// Web/Mobile - Absolute imports from src
+```js
+// Web - absolute imports via jsconfig paths ("@/" → "./src")
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-// Shared packages - Workspace protocol
-import type { ApiResponse, User } from "@novilearn/types";
+// Mobile - relative imports only (Metro resolves extensionless)
+
+// Shared packages - workspace protocol
+import { uuid } from "@novilearn/types";
 import { createApiResponse, emailSchema } from "@novilearn/shared";
 ```
 
-### Within Shared Packages
+### Within Shared / API Packages (Node ESM)
 
-```typescript
-// types -> no internal deps
-// shared -> depends on types
-import type { UUID, PaginationParams } from "@novilearn/types";
+```js
+// Node ESM requires explicit file extensions for relative imports:
+import { config } from "../config.js";
+import { AppError } from "../../errors.js";
+
+// shared -> zod + types
+import { emailSchema } from "./validation.js";
 ```
 
 ## File Naming Conventions
 
-| Type            | Convention       | Example                      |
-| --------------- | ---------------- | ---------------------------- |
-| Components      | PascalCase       | `Button.tsx`, `UserCard.tsx` |
-| Hooks           | camelCase + use  | `useAuth.ts`, `useQuery.ts`  |
-| Utilities       | camelCase        | `utils.ts`, `dateHelpers.ts` |
-| Types           | PascalCase       | `User.ts`, `ApiResponse.ts`  |
-| Constants       | UPPER_SNAKE_CASE | `API_ENDPOINTS.ts`           |
-| Pages (Next.js) | lowercase        | `page.tsx`, `layout.tsx`     |
-| Routes (Expo)   | lowercase        | `index.tsx`, `settings.tsx`  |
+| Type            | Convention       | Example                                |
+| --------------- | ---------------- | -------------------------------------- |
+| Components      | PascalCase       | `Button.jsx`, `UserCard.jsx`           |
+| Hooks           | camelCase + use  | `useAuth.js`, `useQuery.js`            |
+| Utilities       | camelCase        | `utils.js`, `dateHelpers.js`           |
+| Constants       | UPPER_SNAKE_CASE | `API_ENDPOINTS.js`                     |
+| Pages (Next.js) | lowercase        | `page.jsx`, `layout.jsx`               |
+| Routes (Expo)   | lowercase        | `index.jsx`, `settings.jsx`            |
+| API modules     | dot-suffix       | `auth.routes.js`, `auth.controller.js` |
 
 ## Future Expansion
 
@@ -407,8 +427,8 @@ Key ignores:
 - `node_modules/`
 - `dist/`, `build/`, `.next/`, `.expo/`
 - `.turbo/`
-- `*.tsbuildinfo`
+- `next-env.d.ts`, `expo-env.d.ts`, `nativewind-env.d.ts` (generated stubs)
 - `.env*`
 - `.DS_Store`, `*.log`
 - `coverage/`
-- `prisma/migrations/` (generated)
+- `prisma/migrations/` (version-controlled behind negation rule)

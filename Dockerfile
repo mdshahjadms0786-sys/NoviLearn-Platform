@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 
-# Monorepo runtime: builds the workspace packages and runs the API in production
-# mode (compiled apps/api/dist, executed through tsx so the workspace libs that
-# resolve to their src entry points keep working).
+# Monorepo runtime: installs workspace dependencies and runs the API in
+# production mode (plain `node apps/api/src/index.js`; the API runs directly
+# from source, so no compile step is needed).
 FROM node:24-bookworm-slim AS runner
 
 ENV PNPM_HOME=/pnpm
@@ -18,11 +18,6 @@ COPY . .
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm install --frozen-lockfile
 
-RUN pnpm --filter=@novilearn/types build \
-  && pnpm --filter=@novilearn/shared build \
-  && pnpm --filter=@novilearn/api build
-
 EXPOSE 3001
 
-# workspaces resolve to src entry points, so compile-then-run needs the tsx loader
-CMD ["node", "--import", "tsx", "apps/api/dist/index.js"]
+CMD ["node", "apps/api/src/index.js"]

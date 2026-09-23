@@ -15,7 +15,7 @@ env:
 
 jobs:
   test:
-    name: typecheck, lint, build, tests
+    name: lint, build, tests
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -59,13 +59,19 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/novilearn?schema=public
         run: pnpm exec prisma migrate deploy
 
-      - name: Typecheck
-        run: pnpm -r run typecheck
+      - name: Guard against TypeScript files
+        run: |
+          TS=$(git ls-files '*.ts' '*.tsx' ':!**/*.d.ts' || true)
+          if [ -n "$TS" ]; then
+            echo "Unexpected TypeScript files in JavaScript repo:"
+            echo "$TS"
+            exit 1
+          fi
 
       - name: Lint
         run: pnpm -r run lint
 
-      - name: Build workspace packages + web
+      - name: Build web
         run: pnpm -r run build
 
       - name: Phase 8 tests
@@ -73,16 +79,16 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/novilearn?schema=public
         run: |
-          node --import tsx scripts/phase8-unit-tests.ts
-          node --import tsx scripts/phase8-integration-tests.ts
+          node scripts/phase8-unit-tests.js
+          node scripts/phase8-integration-tests.js
 
       - name: Phase 9 tests
         working-directory: apps/api
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/novilearn?schema=public
         run: |
-          node --import tsx scripts/phase9-unit-tests.ts
-          node --import tsx scripts/phase9-integration-tests.ts
+          node scripts/phase9-unit-tests.js
+          node scripts/phase9-integration-tests.js
 
       - name: Phase 10 tests
         working-directory: apps/api
@@ -90,6 +96,6 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/novilearn?schema=public
           EMBEDDING_PROVIDER: local
         run: |
-          node --import tsx scripts/phase10-unit-tests.ts
-          node --import tsx scripts/phase10-integration-tests.ts
-          node --import tsx scripts/phase10-cleanup.ts
+          node scripts/phase10-unit-tests.js
+          node scripts/phase10-integration-tests.js
+          node scripts/phase10-cleanup.js

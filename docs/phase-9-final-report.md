@@ -26,15 +26,15 @@ Harden the Phase-1–8 product into a production-ready state: verify integration
 
 ## 3. Audit Summary (what was verified without change)
 
-| Area | Findings |
-| --- | --- |
-| **Authn** | JWT `HS256` via `config.jwtSecret` (min 32 chars enforced by `zod`); `tokenVersion` claim + DB check → logout revokes immediately; duplicate-email guard both in `auth.service` (`409`) and error handler (P2002 → `409`); passwords bcrypt (12 rounds); public user never leaks `password` |
-| **Authz** | `authenticate` middleware scopes to `user.id`; every practice/progress service call gates `userId`; practice sessions keyed `(sessionId, userId)` in an in-memory `Map`; cross-user access → `404` (not `403`, to avoid leaking existence) |
+| Area                   | Findings                                                                                                                                                                                                                                                                                                                          |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Authn**              | JWT `HS256` via `config.jwtSecret` (min 32 chars enforced by `zod`); `tokenVersion` claim + DB check → logout revokes immediately; duplicate-email guard both in `auth.service` (`409`) and error handler (P2002 → `409`); passwords bcrypt (12 rounds); public user never leaks `password`                                       |
+| **Authz**              | `authenticate` middleware scopes to `user.id`; every practice/progress service call gates `userId`; practice sessions keyed `(sessionId, userId)` in an in-memory `Map`; cross-user access → `404` (not `403`, to avoid leaking existence)                                                                                        |
 | **Practice integrity** | Server-side grading (client never decides correctness); idempotent re-answer preserves first result; duplicate completion swallowed (P2002) → single row; answers idempotent per question; 60-min TTL enforced on every access; client payload strips `correctAnswer` / `acceptedAnswers` / `explanation` (`toClientPracticeSet`) |
-| **AI** | Missing provider/key → clean `503 AI_PROVIDER_NOT_CONFIGURED` (never a `500`); strict providers; malformed responses → `502 AI_RESPONSE_INVALID` without crashing; input schema bounds length; per-user rate limit (20/10 min); per-user same-question dedupe (10 s); no activity recorded on failed requests |
-| **Progress** | MySQL-grouped mastery/progress computed from own rows only; suggestions deterministic; session detail enriches question text from the stored JSON |
-| **Middleware/HTTP** | helmet, strict CORS to `WEB_URL` (single origin, not `*`), JSON body parsing, morgan logging, unified API envelope (`data`/`error`/`meta`) via `@novilearn/shared`, centralized error handler (AppError → correct status; body-parser `4xx` → `400`; unknown → `500`) |
-| **Env/config** | `loadEnvFile()` reads `.env`; DB credential reads from `DATABASE_URL`; no secrets shipped to clients; `.env.example` documents the correct AI vars (`AI_PROVIDER` / `AI_API_KEY` / `AI_MODEL`) |
+| **AI**                 | Missing provider/key → clean `503 AI_PROVIDER_NOT_CONFIGURED` (never a `500`); strict providers; malformed responses → `502 AI_RESPONSE_INVALID` without crashing; input schema bounds length; per-user rate limit (20/10 min); per-user same-question dedupe (10 s); no activity recorded on failed requests                     |
+| **Progress**           | MySQL-grouped mastery/progress computed from own rows only; suggestions deterministic; session detail enriches question text from the stored JSON                                                                                                                                                                                 |
+| **Middleware/HTTP**    | helmet, strict CORS to `WEB_URL` (single origin, not `*`), JSON body parsing, morgan logging, unified API envelope (`data`/`error`/`meta`) via `@novilearn/shared`, centralized error handler (AppError → correct status; body-parser `4xx` → `400`; unknown → `500`)                                                             |
+| **Env/config**         | `loadEnvFile()` reads `.env`; DB credential reads from `DATABASE_URL`; no secrets shipped to clients; `.env.example` documents the correct AI vars (`AI_PROVIDER` / `AI_API_KEY` / `AI_MODEL`)                                                                                                                                    |
 
 ## 4. Defects Found and FIXED
 
@@ -64,7 +64,7 @@ Harden the Phase-1–8 product into a production-ready state: verify integration
 
 ### 4.5 Misleading practice error title
 
-Web `practice-tutor.tsx` and mobile `practice-flow.tsx` always showed *"…while preparing your practice"* even when a submission or completion failed.
+Web `practice-tutor.tsx` and mobile `practice-flow.tsx` always showed _"…while preparing your practice"_ even when a submission or completion failed.
 
 **Fix:** the error title is now derived from the pending action (`generate` / `answer` / `complete`).
 
@@ -77,6 +77,7 @@ Practice completion persisted `config.topic` verbatim while learning activity us
 ### 4.7 Low-contrast status colors (WCAG)
 
 Computed WCAG ratios for badge tokens in `apps/web/src/app/globals.css`:
+
 - light theme warning text/bg: **1.92 → 6.73** (`--warning-foreground: 48 96% 89%` → `38 92% 12%`)
 - dark theme success (its foreground against light-green bg): **1.45 → 4.95** (`--success: 142 71% 45%` → `142 64% 30%`, `--success-foreground: 142 76% 36%` → `210 40% 98%`)
 
@@ -92,23 +93,23 @@ Dark `info` (4.85) and dark `warning` (5.77) already pass and were untouched.
 
 ## 5. What Changed (files)
 
-| File | Change |
-| --- | --- |
-| `apps/api/src/utils/topic.ts` | **new** — shared `normalizeTopic` (trim, collapse whitespace, lowercase, ≤500 chars) |
-| `apps/api/src/progress/progress.service.ts` | imports + re-exports `normalizeTopic` from utils (behavior unchanged) |
-| `apps/api/src/practice/practice.service.ts` | normalizes topic on completion result + persisted row |
-| `apps/mobile/src/app/_layout.tsx` | **new** — real expo-router root layout (+ `SafeAreaProvider`) |
-| `apps/mobile/src/_layout.tsx` | deleted (dead code) |
-| `apps/mobile/src/providers.tsx` | devtools gated to non-production |
-| `apps/mobile/app.json` | `newArchEnabled: true` |
-| `apps/web/src/lib/api.ts` | safe JSON parse → typed `ApiClientError` |
-| `apps/mobile/src/lib/auth-store.ts` | clear session only on `401`; optimistic resume from cached user |
-| `apps/web/src/lib/auth-store.ts` | clear token only on `401`; keep token on transient failure |
-| `apps/web/src/app/page.tsx` | real API health link; `flex-wrap` |
-| `apps/web/src/components/practice/practice-tutor.tsx`, `apps/mobile/src/components/practice/practice-flow.tsx` | pendingAction-aware error titles |
-| `apps/web/src/app/globals.css` | light warning-foreground + dark success tokens (WCAG) |
-| `apps/web/src/components/ui/states.tsx`, `spinner.tsx` | `aria-hidden` on decorative SVGs |
-| `apps/api/scripts/phase9-unit-tests.ts`, `phase9-integration-tests.ts`, `phase9-cleanup.ts` | **new** test + cleanup scripts |
+| File                                                                                                           | Change                                                                               |
+| -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `apps/api/src/utils/topic.ts`                                                                                  | **new** — shared `normalizeTopic` (trim, collapse whitespace, lowercase, ≤500 chars) |
+| `apps/api/src/progress/progress.service.ts`                                                                    | imports + re-exports `normalizeTopic` from utils (behavior unchanged)                |
+| `apps/api/src/practice/practice.service.ts`                                                                    | normalizes topic on completion result + persisted row                                |
+| `apps/mobile/src/app/_layout.tsx`                                                                              | **new** — real expo-router root layout (+ `SafeAreaProvider`)                        |
+| `apps/mobile/src/_layout.tsx`                                                                                  | deleted (dead code)                                                                  |
+| `apps/mobile/src/providers.tsx`                                                                                | devtools gated to non-production                                                     |
+| `apps/mobile/app.json`                                                                                         | `newArchEnabled: true`                                                               |
+| `apps/web/src/lib/api.ts`                                                                                      | safe JSON parse → typed `ApiClientError`                                             |
+| `apps/mobile/src/lib/auth-store.ts`                                                                            | clear session only on `401`; optimistic resume from cached user                      |
+| `apps/web/src/lib/auth-store.ts`                                                                               | clear token only on `401`; keep token on transient failure                           |
+| `apps/web/src/app/page.tsx`                                                                                    | real API health link; `flex-wrap`                                                    |
+| `apps/web/src/components/practice/practice-tutor.tsx`, `apps/mobile/src/components/practice/practice-flow.tsx` | pendingAction-aware error titles                                                     |
+| `apps/web/src/app/globals.css`                                                                                 | light warning-foreground + dark success tokens (WCAG)                                |
+| `apps/web/src/components/ui/states.tsx`, `spinner.tsx`                                                         | `aria-hidden` on decorative SVGs                                                     |
+| `apps/api/scripts/phase9-unit-tests.ts`, `phase9-integration-tests.ts`, `phase9-cleanup.ts`                    | **new** test + cleanup scripts                                                       |
 
 ## 6. Test Suites Added
 
@@ -134,19 +135,19 @@ All suites green: `phase8-unit` 19/19, `phase9-unit` 52/52, `phase8-integration`
 
 ## 7. Verification Matrix
 
-| Check | Result |
-| --- | --- |
-| `pnpm -r run typecheck` (7 projects) | Pass |
-| `pnpm -r run lint` | Pass (1 pre-existing warning: `no-console` in `apps/api/src/index.ts:122`) |
-| `pnpm exec prisma validate` | Pass |
-| `pnpm --filter @novilearn/api exec tsx scripts/phase8-unit-tests.ts` | 19 passed, 0 failed |
-| `pnpm --filter @novilearn/api exec tsx scripts/phase9-unit-tests.ts` | 52 passed, 0 failed |
-| `pnpm --filter @novilearn/api exec tsx scripts/phase8-integration-tests.ts` | 54 passed, 0 failed |
-| `pnpm --filter @novilearn/api exec tsx scripts/phase9-integration-tests.ts` | 48 passed, 0 failed |
-| `pnpm --filter @novilearn/web build` | Pass — 12 routes, `First Load JS` shared 102 kB |
-| `apps/mobile` → `npx expo export --platform android` | Pass — Hermes bundle `entry-*.hbc` (5.29 MB) exported |
-| `phase8-check-db.ts` after tests | 0 test users, 0 learning activities, 0 practice sessions |
-| No secrets added | `.env` untouched; report + diffs contain no keys; `.env.example` values are placeholders |
+| Check                                                                       | Result                                                                                   |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `pnpm -r run typecheck` (7 projects)                                        | Pass                                                                                     |
+| `pnpm -r run lint`                                                          | Pass (1 pre-existing warning: `no-console` in `apps/api/src/index.ts:122`)               |
+| `pnpm exec prisma validate`                                                 | Pass                                                                                     |
+| `pnpm --filter @novilearn/api exec tsx scripts/phase8-unit-tests.ts`        | 19 passed, 0 failed                                                                      |
+| `pnpm --filter @novilearn/api exec tsx scripts/phase9-unit-tests.ts`        | 52 passed, 0 failed                                                                      |
+| `pnpm --filter @novilearn/api exec tsx scripts/phase8-integration-tests.ts` | 54 passed, 0 failed                                                                      |
+| `pnpm --filter @novilearn/api exec tsx scripts/phase9-integration-tests.ts` | 48 passed, 0 failed                                                                      |
+| `pnpm --filter @novilearn/web build`                                        | Pass — 12 routes, `First Load JS` shared 102 kB                                          |
+| `apps/mobile` → `npx expo export --platform android`                        | Pass — Hermes bundle `entry-*.hbc` (5.29 MB) exported                                    |
+| `phase8-check-db.ts` after tests                                            | 0 test users, 0 learning activities, 0 practice sessions                                 |
+| No secrets added                                                            | `.env` untouched; report + diffs contain no keys; `.env.example` values are placeholders |
 
 ## 8. Known Limitations (documented, not changed)
 

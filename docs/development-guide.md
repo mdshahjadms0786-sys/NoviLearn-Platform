@@ -58,17 +58,15 @@ pnpm dev:mobile
 #### Shared Types (@novilearn/types)
 
 ```bash
-# Edit packages/types/src/index.ts
-# Changes automatically available in all apps after rebuild
-pnpm --filter=@novilearn/types typecheck
+# Edit packages/types/src/index.js
+# Changes automatically available in all apps
 ```
 
 #### Shared Validation (@novilearn/shared)
 
 ```bash
-# Edit packages/shared/src/validation.ts
+# Edit packages/shared/src/validation.js
 # Changes automatically available in all apps
-pnpm --filter=@novilearn/shared typecheck
 pnpm --filter=@novilearn/shared lint
 ```
 
@@ -83,7 +81,7 @@ pnpm --filter=@novilearn/shared lint
 
 ```bash
 # Edit apps/api/src/
-# Auto-reloads with tsx watch
+# Auto-reloads with node --watch
 pnpm --filter=@novilearn/api dev
 ```
 
@@ -118,14 +116,18 @@ pnpm lint:fix
 pnpm --filter=@novilearn/web lint
 ```
 
-### Type Checking
+### Testing & Verification
 
 ```bash
-# Type check all packages
-pnpm typecheck
+# This is a pure-JavaScript repository (no TypeScript, no build step).
+# ESLint is the static analysis gate. Test suites run directly on Node:
 
-# Type check specific package
-pnpm --filter=@novilearn/api typecheck
+node apps/api/scripts/phase8-unit-tests.js
+node apps/api/scripts/phase8-integration-tests.js
+node apps/api/scripts/phase9-unit-tests.js
+node apps/api/scripts/phase9-integration-tests.js
+node apps/api/scripts/phase10-unit-tests.js
+node apps/api/scripts/phase10-integration-tests.js
 ```
 
 ### Formatting
@@ -317,16 +319,11 @@ pnpm install
 rm -rf .turbo
 ```
 
-### Type Errors After Shared Package Changes
+### Stale Shared Modules After Shared Package Changes
 
 ```bash
-# Rebuild shared packages
-pnpm --filter=@novilearn/types build
-pnpm --filter=@novilearn/shared build
-pnpm --filter=@novilearn/config build
-
-# Restart TypeScript server in IDE
-# VS Code: Cmd+Shift+P -> "TypeScript: Restart TS Server"
+# Workspace packages resolve to their src entry points, so no build is needed.
+# Restart the running dev process (or touch the .env file) to pick up changes.
 ```
 
 ## Git Workflow
@@ -356,8 +353,9 @@ Follow conventional commits:
 ```bash
 # Run before pushing
 pnpm lint
-pnpm typecheck
 pnpm format:check
+pnpm --filter=@novilearn/web build
+node apps/api/scripts/phase10-integration-tests.js
 ```
 
 ## Adding New Packages
@@ -390,7 +388,7 @@ Recommended extensions:
 - Tailwind CSS IntelliSense
 - Prisma
 - Expo Tools
-- TypeScript Hero
+- JavaScript (VS Code built-in)
 
 Settings (`.vscode/settings.json`):
 
@@ -399,8 +397,7 @@ Settings (`.vscode/settings.json`):
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
-  },
-  "typescript.tsdk": "node_modules/typescript/lib"
+  }
 }
 ```
 
@@ -416,12 +413,10 @@ Settings (`.vscode/settings.json`):
 ### "Cannot find module @novilearn/..."
 
 ```bash
-# Ensure packages are built
-pnpm --filter=@novilearn/types build
-pnpm --filter=@novilearn/shared build
-pnpm --filter=@novilearn/config build
+# Ensure workspace packages resolve (symlinked via pnpm workspaces)
+pnpm install
 
-# Restart TS server in IDE
+# Restart the dev server / watcher
 ```
 
 ### Prisma Client Out of Sync
@@ -451,7 +446,7 @@ pnpm --filter=@novilearn/web dev
 
 ```bash
 # Chunk + embed + upsert files (md/csv/json/txt) into knowledge_chunks
-pnpm --filter=@novilearn/api exec tsx scripts/ingest-knowledge.ts --dir ./docs --source docs
+pnpm --filter=@novilearn/api exec node scripts/ingest-knowledge.js --dir ./docs --source docs
 # --source tags the chunks (used for targeted retrieval/cleanup); requires API .env
 ```
 
@@ -460,9 +455,8 @@ Uses the configured `EMBEDDING_PROVIDER` (`openai` needs `EMBEDDING_API_KEY`; `l
 ### Running the API in Production
 
 ```bash
-# Build workspaces + API, then run the compiled server (tsx loader resolves workspace src entry points)
-pnpm -r run build
-pnpm --filter=@novilearn/api start   # = node --import tsx dist/index.js
+# The API runs directly from source: no build step.
+pnpm --filter=@novilearn/api start   # = node apps/api/src/index.js
 ```
 
 `/health` (liveness) and `/readiness` (database check) are exposed on the same port.
@@ -472,13 +466,13 @@ pnpm --filter=@novilearn/api start   # = node --import tsx dist/index.js
 Run from `apps/api`. These spin up a real HTTP server on a fixed port and need the local Postgres (`DATABASE_URL` from `.env`). Reset windows first with the phase-10 cleanup (auth rate limits are keyed by IP).
 
 ```bash
-node --import tsx scripts/phase8-unit-tests.ts        # 19 checks
-node --import tsx scripts/phase8-integration-tests.ts # 54 checks, port 3207
-node --import tsx scripts/phase9-unit-tests.ts        # 52 checks
-node --import tsx scripts/phase9-integration-tests.ts # 48 checks, port 3208
-node --import tsx scripts/phase10-unit-tests.ts       # 63 checks
-EMBEDDING_PROVIDER=local node --import tsx scripts/phase10-integration-tests.ts # 31 checks, port 3210
-node --import tsx scripts/phase10-cleanup.ts          # rm test users/chunks + reset all rate-limit buckets
+node scripts/phase8-unit-tests.js        # 19 checks
+node scripts/phase8-integration-tests.js # 54 checks, port 3207
+node scripts/phase9-unit-tests.js        # 52 checks
+node scripts/phase9-integration-tests.js # 48 checks, port 3208
+node scripts/phase10-unit-tests.js       # 63 checks
+node scripts/phase10-integration-tests.js # 31 checks, port 3210 (set EMBEDDING_PROVIDER=local)
+node scripts/phase10-cleanup.js          # rm test users/chunks + reset all rate-limit buckets
 ```
 
 ### Docker / Compose
@@ -493,4 +487,4 @@ docker compose up --build
 
 ### CI
 
-`.github/workflows/ci.yml` runs on push/PR to `main`: a fresh Postgres 18 service container, pnpm install (frozen), `prisma generate` + `migrate deploy` (applies the `cosine_similarity` function), typecheck, lint, build, then all six test suites. Set `HUSKY=0` for CI (done in the workflow).
+`.github/workflows/ci.yml` runs on push/PR to `main`: a fresh Postgres 18 service container, pnpm install (frozen), `prisma generate` + `migrate deploy` (applies the `cosine_similarity` function), a guard that fails if any `.ts`/`.tsx` file is tracked, lint, web build, then all six test suites. Set `HUSKY=0` for CI (done in the workflow).

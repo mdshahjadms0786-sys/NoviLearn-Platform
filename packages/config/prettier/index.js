@@ -4,17 +4,17 @@ module.exports = {
   useTabs: false,
   semi: true,
   singleQuote: true,
-  quoteProps: 'as-needed',
+  quoteProps: "as-needed",
   jsxSingleQuote: true,
-  trailingComma: 'es5',
+  trailingComma: "es5",
   bracketSpacing: true,
   bracketSameLine: false,
-  arrowParens: 'always',
-  endOfLine: 'lf',
-  plugins: ['prettier-plugin-packagejson'],
+  arrowParens: "always",
+  endOfLine: "lf",
+  plugins: ["prettier-plugin-packagejson"],
   overrides: [
     {
-      files: ['*.json', '*.md', '*.yaml', '*.yml'],
+      files: ["*.json", "*.md", "*.yaml", "*.yml"],
       options: {
         printWidth: 120,
       },

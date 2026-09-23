@@ -7,12 +7,12 @@ NoviLearn uses a pnpm workspace monorepo with the following structure:
 ```
 NoviLearn/
 ├── apps/
-│   ├── api/          # Backend API (Express + TypeScript)
+│   ├── api/          # Backend API (Express + JavaScript/ESM)
 │   ├── web/          # Web Application (Next.js + React)
 │   └── mobile/       # Mobile Application (Expo + React Native)
 ├── packages/
 │   ├── config/       # Shared tooling configurations
-│   ├── types/        # Shared TypeScript type definitions
+│   ├── types/        # Shared type helpers (runtime) + JSDoc-typed API
 │   └── shared/       # Shared utilities and validation schemas
 └── docs/             # Documentation
 ```
@@ -20,7 +20,7 @@ NoviLearn/
 ## Core Principles
 
 1. **Single Source of Truth**: Shared types, validation, and configuration across all apps
-2. **Type Safety**: End-to-end TypeScript with strict mode enabled
+2. **Runtime Safety**: End-to-end Zod validation plus ESLint as the static-analysis gate
 3. **Separation of Concerns**: Clear boundaries between apps and shared packages
 4. **Scalability**: Architecture supports future growth (AI, auth, real-time, etc.)
 5. **Developer Experience**: Consistent tooling, fast feedback loops
@@ -29,7 +29,7 @@ NoviLearn/
 
 ### API (apps/api)
 
-- **Framework**: Express.js with TypeScript
+- **Framework**: Express.js with JavaScript (Node.js ESM, runs directly from `src`, no build step)
 - **Database**: PostgreSQL with Prisma ORM
 - **Validation**: Zod schemas (shared via @novilearn/shared)
 - **API Design**: RESTful with consistent response format
@@ -59,7 +59,7 @@ NoviLearn/
 - **Profile**: `/account` profile page inside the app shell (account info, learning profile, sign out)
 - **Landing Redirect**: authenticated visitors to `/` are redirected to `/home`
 - **Forms**: React Hook Form + Zod validation
-- **Type Safety**: Shared types from @novilearn/types
+- **Data Contracts**: Runtime types/validation shared via @novilearn/types + @novilearn/shared
 
 ### Mobile (apps/mobile)
 
@@ -89,15 +89,14 @@ Centralized configuration for:
 
 - ESLint (base, Next.js, React Native variants)
 - Prettier
-- TypeScript (base, Next.js, React Native, Node variants)
 
 ### @novilearn/types
 
-Core TypeScript types shared across all applications:
+Annotated runtime type helpers consumed by the whole platform (documented via JSDoc):
 
-- API response types (ApiResponse, ApiError, PaginatedResponse)
-- Domain types (User, UUID, Environment, HealthCheck)
-- Utility types (PaginationParams, LogLevel, etc.)
+- API response helpers (ApiResponse, ApiError, PaginatedResponse)
+- Domain helpers (User, UUID, Environment, HealthCheck)
+- Utility helpers (PaginationParams, LogLevel, etc.)
 
 ### @novilearn/shared
 
@@ -133,20 +132,10 @@ Runtime utilities and validation:
 
 All API responses follow a consistent format:
 
-```typescript
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: ApiError;
-  meta?: ResponseMeta;
-}
-
-interface ApiError {
-  code: string;
-  message: string;
-  details?: Record<string, unknown>;
-  statusCode: number;
-}
+```js
+// Response shapes produced by @novilearn/shared helpers:
+// { success, data?, error?, meta? }
+// { code, message, details?, statusCode }
 ```
 
 ## Database
@@ -243,12 +232,12 @@ Middleware chain: `authenticate → per-user rate limiter → validate(learningQ
 
 ### Provider Abstraction (`apps/api/src/ai`)
 
-- `ai.types.ts` — `LanguageModelMessage`, `LanguageModelConfig`, `AiProvider`, `AiCompletionInput`, `ProviderRawContent`
-- `prompts/system.ts` — system prompt (JSON-only output, no fabricated citations, beginner-friendly, does not claim the student's level) + `buildTutorMessages(question)`
-- `providers/openai.provider.ts` — OpenAI chat-completions via native `fetch` (no SDK dependency), `response_format: json_object`, 30s timeout, non-fatal provider errors sanitized into a 502 `AI_PROVIDER_ERROR`
-- `providers/index.ts` — `createProvider(name)` factory (503 if the provider is not registered)
-- `normalizer.ts` — validates/normalizes provider JSON into a shared `LearningResponse`; requires a non-empty `summary`
-- `ai.service.ts` — resolves `config.ai` (503 when provider/key missing), calls the provider, normalizes
+- `ai.types.js` — `LanguageModelMessage`, `LanguageModelConfig`, `AiProvider`, `AiCompletionInput`, `ProviderRawContent`
+- `prompts/system.js` — system prompt (JSON-only output, no fabricated citations, beginner-friendly, does not claim the student's level) + `buildTutorMessages(question)`
+- `providers/openai.provider.js` — OpenAI chat-completions via native `fetch` (no SDK dependency), `response_format: json_object`, 30s timeout, non-fatal provider errors sanitized into a 502 `AI_PROVIDER_ERROR`
+- `providers/index.js` — `createProvider(name)` factory (503 if the provider is not registered)
+- `normalizer.js` — validates/normalizes provider JSON into a shared `LearningResponse`; requires a non-empty `summary`
+- `ai.service.js` — resolves `config.ai` (503 when provider/key missing), calls the provider, normalizes
 
 The normalized `LearningResponse` contains fixed-titled sections in order: Learn this concept (summary), Simple explanation, Key points, Example, Analogy, Follow-up questions — only sections the model produced are present, plus optional `visualLearning`, `relatedConcepts`, and `nextLearning`, and an accuracy disclaimer.
 
@@ -319,10 +308,10 @@ Middleware chain: `authenticate → per-user rate limiter → validate(schema) �
 
 ### Generation & Evaluation (`apps/api/src/practice`)
 
-- The practice prompt (`apps/api/src/ai/prompts/practice.ts`) follows the AI Tutor's strict JSON-output / beginner-friendly / no-fabrication rules and requests exactly `questionCount` questions of the configured type and difficulty.
-- `practice.normalizer.ts` normalizes provider JSON into `InternalPracticeQuestion[]`, refusing unsafe output (missing/undefined answer, wrong option count, balanced true/false options, duplicate text, too few/many questions) with `502 AI_RESPONSE_INVALID`.
-- `evaluator.ts` scores answers server-side. MCQ/true-false use exact option matching; short answer uses normalized text comparison (trim, lowercase, whitespace collapse, trailing punctuation strip) — a documented Phase 7 limitation (no semantic grading).
-- Client rendering: web (`practice-tutor.tsx`) and mobile (`practice-flow.tsx`) share the same state machine (setup → staged loading → question → feedback → result) and reuse the `?topic=` (into Practice) and `/learn?q=` (back into Learn) navigation patterns.
+- The practice prompt (`apps/api/src/ai/prompts/practice.js`) follows the AI Tutor's strict JSON-output / beginner-friendly / no-fabrication rules and requests exactly `questionCount` questions of the configured type and difficulty.
+- `practice.normalizer.js` normalizes provider JSON into `InternalPracticeQuestion[]`, refusing unsafe output (missing/undefined answer, wrong option count, balanced true/false options, duplicate text, too few/many questions) with `502 AI_RESPONSE_INVALID`.
+- `evaluator.js` scores answers server-side. MCQ/true-false use exact option matching; short answer uses normalized text comparison (trim, lowercase, whitespace collapse, trailing punctuation strip) — a documented Phase 7 limitation (no semantic grading).
+- Client rendering: web (`practice-tutor.jsx`) and mobile (`practice-flow.jsx`) share the same state machine (setup → staged loading → question → feedback → result) and reuse the `?topic=` (into Practice) and `/learn?q=` (back into Learn) navigation patterns.
 
 ### Protection & Cost Controls
 
@@ -352,11 +341,11 @@ Errors: `401 UNAUTHORIZED`, `400 VALIDATION_ERROR` (bad `limit`/non-UUID id), `4
 
 ### Computation (`apps/api/src/progress`)
 
-- `calculations.ts` — pure `computeMastery` and `computeTopicProgress`:
+- `calculations.js` — pure `computeMastery` and `computeTopicProgress`:
   - Mastery: no activity → `NOT_STARTED`; learning only → `LEARNING`; ≥ 2 practices with best ≥ 80 and average ≥ 80 → `STRONG`; otherwise `PRACTICING`.
   - Progress (0–100): learning `min(count,4)/4*50` + practice `min(count,3)/3*30` + average accuracy `value/100*20`, rounded and clamped.
-- `personalization.ts` — pure `buildSuggestions`: ordered `continue_learning` (most recent non-`STRONG` topic, falling back to most recent), `practice_again`, `review_weak_topic` (lowest best-accuracy below 80), `related_next_topic` (from recent learning metadata). One item per kind, deterministic.
-- `progress.service.ts` — aggregation via Prisma `groupBy`/`aggregate`, topic normalization (trim/collapse/lowercase, cap 500), recent-activity merge (learn + practice, desc, cap 10), summary counts and `averageAccuracy` (one decimal).
+- `personalization.js` — pure `buildSuggestions`: ordered `continue_learning` (most recent non-`STRONG` topic, falling back to most recent), `practice_again`, `review_weak_topic` (lowest best-accuracy below 80), `related_next_topic` (from recent learning metadata). One item per kind, deterministic.
+- `progress.service.js` — aggregation via Prisma `groupBy`/`aggregate`, topic normalization (trim/collapse/lowercase, cap 500), recent-activity merge (learn + practice, desc, cap 10), summary counts and `averageAccuracy` (one decimal).
 
 ### Design Notes
 
@@ -377,14 +366,14 @@ The architecture is designed to support:
 
 ## Development Workflow
 
-1. **Type Changes**: Modify @novilearn/types → rebuild shared → apps auto-update
+1. **Type Changes**: Modify @novilearn/types → apps auto-update (no build step)
 2. **Validation Changes**: Modify @novilearn/shared → apps auto-update
 3. **Config Changes**: Modify @novilearn/config → all apps inherit
 4. **Database Changes**: Modify Prisma schema → `pnpm db:generate` → `pnpm db:push`
 
 ## Code Quality
 
-- **TypeScript**: Strict mode, noUncheckedIndexedAccess, exactOptionalPropertyTypes
-- **ESLint**: Shared configs with React, TypeScript, import ordering rules
+- **ESLint**: Shared flat configs (Node + browser globals, JSX, import ordering)
+- **Zod**: Runtime validation at every API boundary (replaces erased compile-time types)
 - **Prettier**: Consistent formatting across all packages
 - **Husky**: Pre-commit hooks for linting and formatting
