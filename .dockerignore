@@ -17,7 +17,10 @@
 pnpm-debug.log*
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
+!**/.env.example
 .gitkeep
 
 coverage

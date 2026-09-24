@@ -258,13 +258,17 @@ pnpm test:coverage
 ## Building for Production
 
 ```bash
-# Build all apps
+# Build the web app
+pnpm build:web
+
+# Build all apps that have a build script (currently the web app)
 pnpm build
 
-# Build specific app
-pnpm build:web
-pnpm build:api
-pnpm build:mobile
+# The API runs directly from source with Node (no compile step):
+node apps/api/src/index.js
+
+# Mobile production bundles (web + android + ios) for the current working directory:
+pnpm --filter=@novilearn/mobile exec expo export
 ```
 
 ## Debugging
