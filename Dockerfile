@@ -30,4 +30,8 @@ ENV NODE_ENV=production
 
 EXPOSE 3001
 
+# Liveness check against the Node API (slim image has no curl/wget).
+HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
 CMD ["node", "apps/api/src/index.js"]
