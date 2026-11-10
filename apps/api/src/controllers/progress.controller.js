@@ -7,6 +7,7 @@ import {
 import { AppError } from "../errors.js";
 import {
   getPracticeHistoryDetail,
+  getLearningStreak,
   getProgressSummary,
   getSuggestions,
   getTopicProgress,
@@ -63,6 +64,11 @@ export const practiceHistoryDetailController = asyncHandler(
     res.status(200).json(createApiResponse(detail));
   },
 );
+export const streakController = asyncHandler(async (req, res) => {
+  const authenticated = req;
+  const streak = await getLearningStreak(authenticated.user.id);
+  res.status(200).json(createApiResponse(streak));
+});
 export const topicProgressController = asyncHandler(async (req, res) => {
   const authenticated = req;
   const topics = await getTopicProgress(authenticated.user.id);

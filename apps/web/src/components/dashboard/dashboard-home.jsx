@@ -1,6 +1,7 @@
 "use client";
 
 import { ContinueLearningSection } from "@/components/dashboard/continue-learning-section";
+import { DailyGoalCard } from "@/components/dashboard/daily-goal-card";
 import { LearningEntry } from "@/components/dashboard/learning-entry";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { RecentActivitySection } from "@/components/dashboard/recent-activity-section";
@@ -13,6 +14,7 @@ export function DashboardHome() {
   return (
     <div className="space-y-8">
       <WelcomeSection userName={userName} />
+      <DailyGoalCard />
       <LearningEntry />
       <QuickActions />
       <ContinueLearningSection />

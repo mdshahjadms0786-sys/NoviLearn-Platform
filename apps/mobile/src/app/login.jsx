@@ -97,6 +97,7 @@ export default function LoginScreen() {
           secureTextEntry
           autoCapitalize="none"
           autoComplete="current-password"
+          showPasswordToggle
         />
       </View>
       <Button

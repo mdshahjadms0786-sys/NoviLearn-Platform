@@ -18,6 +18,9 @@ import { aiRouter } from "./routes/ai.routes.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { practiceRouter } from "./routes/practice.routes.js";
 import { progressRouter } from "./routes/progress.routes.js";
+import { learningRouter } from "./routes/learning.routes.js";
+import { mediaRouter } from "./routes/media.routes.js";
+import { preferencesRouter } from "./routes/preferences.routes.js";
 function isDuplicateEmailError(err) {
   return (
     typeof err === "object" &&
@@ -95,6 +98,9 @@ app.use("/auth", authRouter);
 app.use("/ai", aiRouter);
 app.use("/practice", practiceRouter);
 app.use("/progress", progressRouter);
+app.use("/learning", learningRouter);
+app.use("/media", mediaRouter);
+app.use("/preferences", preferencesRouter);
 app.use((_req, res) => {
   const error = createApiError("NOT_FOUND", "Route not found", 404);
   res.status(404).json(error);

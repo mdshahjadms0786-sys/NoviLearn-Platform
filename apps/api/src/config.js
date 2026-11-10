@@ -4,18 +4,43 @@ import { environmentSchema } from "@novilearn/shared";
 
 import { loadEnvFile } from "./env.js";
 loadEnvFile();
+
 function parseAiProvider(value) {
-  if (value === "openai" || value === "anthropic") {
+  if (value === "openai" || value === "anthropic" || value === "gemini") {
     return value;
+  }
+  if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
+    return "gemini";
+  }
+  if (process.env.OPENAI_API_KEY) {
+    return "openai";
+  }
+  if (process.env.ANTHROPIC_API_KEY) {
+    return "anthropic";
   }
   return "";
 }
+
 function parseEmbeddingProvider(value) {
   if (value === "openai" || value === "local") {
     return value;
   }
   return "";
 }
+
+function resolveDefaultModel(provider, customModel) {
+  if (customModel && customModel.trim().length > 0) {
+    return customModel;
+  }
+  if (provider === "gemini") {
+    return "gemini-1.5-flash";
+  }
+  if (provider === "anthropic") {
+    return "claude-3-5-sonnet-latest";
+  }
+  return "gpt-4o-mini";
+}
+
 const envSchema = z.object({
   env: environmentSchema.default("development"),
   port: z.coerce.number().int().min(1).max(65535).default(3001),
@@ -26,7 +51,7 @@ const envSchema = z.object({
   jwtExpiresIn: z.string().min(1).default("7d"),
   aiProvider: z.string().default(""),
   aiApiKey: z.string().default(""),
-  aiModel: z.string().min(1).default("gpt-4o-mini"),
+  aiModel: z.string().default(""),
   embeddingProvider: z.string().default(""),
   embeddingApiKey: z.string().default(""),
   embeddingModel: z.string().min(1).default("text-embedding-3-small"),
@@ -40,6 +65,9 @@ const envSchema = z.object({
   sentryDsn: z.string().default(""),
   logLevel: z.enum(["debug", "info", "warn", "error"]).default("debug"),
 });
+
+const resolvedProvider = parseAiProvider(process.env.AI_PROVIDER);
+
 const parsed = envSchema.parse({
   env: process.env.NODE_ENV,
   port: process.env.PORT,
@@ -48,9 +76,15 @@ const parsed = envSchema.parse({
   databaseUrl: process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN,
-  aiProvider: process.env.AI_PROVIDER,
-  aiApiKey: process.env.AI_API_KEY,
-  aiModel: process.env.AI_MODEL,
+  aiProvider: resolvedProvider,
+  aiApiKey:
+    process.env.AI_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    process.env.OPENAI_API_KEY ||
+    process.env.ANTHROPIC_API_KEY ||
+    "",
+  aiModel: resolveDefaultModel(resolvedProvider, process.env.AI_MODEL),
   embeddingProvider: process.env.EMBEDDING_PROVIDER,
   embeddingApiKey: process.env.EMBEDDING_API_KEY,
   embeddingModel: process.env.EMBEDDING_MODEL,
@@ -61,6 +95,7 @@ const parsed = envSchema.parse({
   sentryDsn: process.env.SENTRY_DSN,
   logLevel: process.env.LOG_LEVEL,
 });
+
 export const config = {
   env: parsed.env,
   port: parsed.port,
@@ -70,7 +105,7 @@ export const config = {
   jwtSecret: parsed.jwtSecret,
   jwtExpiresIn: parsed.jwtExpiresIn,
   ai: {
-    provider: parseAiProvider(parsed.aiProvider),
+    provider: parsed.aiProvider,
     apiKey: parsed.aiApiKey,
     model: parsed.aiModel,
   },

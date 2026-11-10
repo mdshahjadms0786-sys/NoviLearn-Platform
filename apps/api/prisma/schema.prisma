@@ -8,17 +8,23 @@ datasource db {
 }
 
 model User {
-  id                 String               @id @default(uuid())
-  email              String               @unique
-  name               String
-  password           String
-  role               String               @default("student")
-  tokenVersion       Int                    @default(0)
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
-  learningActivities LearningActivity[]
-  practiceSessions   PracticeSession[]
+  id                    String                  @id @default(uuid())
+  email                 String                  @unique
+  name                  String
+  password              String
+  role                  String                  @default("student")
+  tokenVersion          Int                     @default(0)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  learningActivities    LearningActivity[]
+  practiceSessions      PracticeSession[]
   activePracticeSessions ActivePracticeSession[]
+  learningSessions      LearningSession[]
+  savedLearnings        SavedLearning[]
+  preferences           UserPreference?
+  avatars               UserAvatar[]
+  videoJobs             VideoJob[]
+  fileUploads           FileUpload[]
 
   @@map("users")
 }
@@ -28,13 +34,16 @@ model LearningActivity {
   userId    String
   topic     String
   type      String   @default("learn")
+  sessionId String?
   metadata  Json?
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session LearningSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, topic])
+  @@index([sessionId])
   @@map("learning_activities")
 }
 
@@ -67,7 +76,7 @@ model KnowledgeChunk {
   topic      String
   content    String
   metadata   Json?
-  embedding  Float[]    @default([])
+  embedding  Float[]  @default([])
   checksum   String   @unique
   chunkIndex Int      @default(0)
   createdAt  DateTime @default(now())
@@ -123,4 +132,124 @@ model Topic {
 
   @@index([name])
   @@map("topics")
+}
+
+// ─── NEW MODELS ───────────────────────────────────────────────
+
+model LearningSession {
+  id        String   @id @default(uuid())
+  userId    String
+  topic     String
+  title     String
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages   LearningMessage[]
+  activities LearningActivity[]
+  saved      SavedLearning[]
+  videoJobs  VideoJob[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@index([userId, status])
+  @@map("learning_sessions")
+}
+
+model LearningMessage {
+  id        String   @id @default(uuid())
+  sessionId String
+  role      String
+  content   String
+  metadata  Json?
+  mode      String?
+  createdAt DateTime @default(now())
+
+  session LearningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("learning_messages")
+}
+
+model SavedLearning {
+  id        String   @id @default(uuid())
+  userId    String
+  sessionId String
+  createdAt DateTime @default(now())
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session LearningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sessionId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("saved_learnings")
+}
+
+model UserPreference {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  language         String   @default("english")
+  explanationLevel String   @default("balanced")
+  teachingStyle    String   @default("friendly")
+  learningGoals    Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model UserAvatar {
+  id         String   @id @default(uuid())
+  userId     String
+  avatarType String   @default("preset")
+  avatarData Json
+  isActive   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_avatars")
+}
+
+model VideoJob {
+  id            String   @id @default(uuid())
+  userId        String
+  sessionId     String?
+  topic         String
+  script        String?
+  status        String   @default("pending")
+  provider      String   @default("none")
+  externalJobId String?
+  resultUrl     String?
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session LearningSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("video_jobs")
+}
+
+model FileUpload {
+  id        String   @id @default(uuid())
+  userId    String
+  filename  String
+  mimeType  String
+  size      Int
+  path      String
+  content   String?
+  status    String   @default("uploaded")
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("file_uploads")
 }

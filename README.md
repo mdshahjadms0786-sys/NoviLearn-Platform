@@ -1,153 +1,219 @@
-# NoviLearn
+# NoviLearn 🎓⚡
 
-AI-powered learning platform for students.
+> **An Open-Source, Extensible AI Learning Platform for Students and Developers.**
 
-## Overview
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.0.0-green.svg)](https://nodejs.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-%3E%3D11.4.0-orange.svg)](https://pnpm.io/)
+[![CI Status](https://github.com/mdshahjadms0786-sys/NoviLearn-Platform/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-NoviLearn is a scalable learning platform built with a modern tech stack:
+NoviLearn is a modern, modular, self-hostable learning platform designed to help students master complex concepts through multi-modal AI explanations, interactive study sessions, and structured practice. Built with a production-grade monorepo architecture, NoviLearn empowers developers to customize learning pipelines, add custom AI providers, and deploy private learning hubs for schools, universities, and coding bootcamps.
 
-- **Web**: Next.js 15, React 18, JavaScript (JSX), Tailwind CSS, shadcn/ui
-- **Mobile**: Expo, React Native, NativeWind, React Native Paper
-- **API**: Express, JavaScript (Node.js ESM), Prisma ORM, PostgreSQL
-- **Shared**: Types, validation schemas, utilities
+---
 
-## Project Structure
+## 🌟 Key Features
 
-```
+- 🧠 **Adaptive Multi-Mode AI Engine**:
+  - **Simple**: High-level, jargon-free explanations for beginners.
+  - **Detailed**: In-depth breakdowns, underlying scientific mechanisms, and technical formulations.
+  - **Example**: Concrete real-world scenarios, case studies, and analogies.
+  - **Visual**: Structured ASCII diagrams and process flowcharts.
+  - **Exam Prep**: Key exam takeaways, scoring criteria, and high-frequency quiz questions.
+  - **Hinglish**: Natural bilingual explanation mode tailored for South Asian students.
+- 🔌 **Pluggable AI Architecture**: Freedom from vendor lock-in. Switch effortlessly between **Google Gemini (1.5 Flash)**, **OpenAI (GPT-4o)**, **Anthropic Claude**, or a built-in offline educational fallback engine.
+- 📚 **Comprehensive Student Workspace**:
+  - Multi-session history with automatic context preservation.
+  - Intelligent follow-up recommendations to deepen understanding.
+  - Notes, flashcards, diagnostic practice quizzes, and progress analytics.
+- 🎨 **Unified Design System**: Built with `@novilearn/design-tokens`, Tailwind CSS, and Radix UI / shadcn patterns, featuring complete light and dark theme support.
+- 🚀 **Frictionless Self-Hosting**: Run anywhere with Docker Compose, minimal dependencies, and clean environment variable configuration.
+
+---
+
+## 🏗️ Architecture & Monorepo Structure
+
+```text
 NoviLearn/
 ├── apps/
-│   ├── api/          # Express backend API
-│   ├── web/          # Next.js web application
-│   └── mobile/       # Expo React Native application
+│   ├── api/             # Express REST API (Node.js ESM, Prisma ORM, AI Service)
+│   ├── web/             # Next.js 15 Web Application (React 18, Tailwind, shadcn/ui)
+│   └── mobile/          # React Native & Expo cross-platform mobile client
 ├── packages/
-│   ├── config/       # Shared ESLint, Prettier configs
-│   ├── types/        # Shared type helpers (runtime) + JSDoc-typed API
-│   ├── shared/       # Shared utilities, validation (Zod)
-│   └── design-tokens # Shared design tokens (colors, spacing, typography)
-├── docs/
-│   ├── architecture.md
-│   ├── development-guide.md
-│   └── project-structure.md
-├── .env.example
-├── .gitignore
-├── package.json
-├── pnpm-workspace.yaml
-└── README.md
+│   ├── config/          # Shared ESLint and Prettier configurations
+│   ├── design-tokens/   # Design system tokens (colors, typography, spacing)
+│   ├── shared/          # Shared validation schemas (Zod) and business helpers
+│   └── types/           # Shared runtime type assertions and JSDoc types
+├── docs/                # Comprehensive technical and architectural guides
+├── .github/             # CI workflows, issue templates, and PR templates
+├── docker-compose.yml   # Multi-service container orchestration
+└── package.json         # Workspace orchestration scripts
 ```
 
-## Getting Started
+```text
+       [ Next.js 15 Web (:3000) ]       [ Expo Mobile App ]
+                   \                         /
+                    \                       /
+                     ▼                     ▼
+             [ Express REST Backend API (:3001) ]
+                 |                       |
+                 |                       +---> [ Pluggable AI Service ]
+                 |                                 ├── Google Gemini (1.5 Flash)
+                 |                                 ├── OpenAI (GPT-4o)
+                 |                                 ├── Anthropic Claude
+                 |                                 └── Offline Fallback Engine
+                 ▼
+       [ PostgreSQL Database (:5432) ]
+              (via Prisma ORM)
+```
+
+---
+
+## 🚀 Quickstart
 
 ### Prerequisites
 
-- Node.js >= 22.0.0
-- pnpm >= 11.4.0
-- PostgreSQL >= 15
+- **Node.js**: `>= 22.0.0`
+- **pnpm**: `>= 11.4.0`
+- **PostgreSQL**: `>= 15.0` (or run via Docker)
 
-### Installation
+### 1. Clone & Install
 
 ```bash
-# Install dependencies
+git clone https://github.com/mdshahjadms0786-sys/NoviLearn-Platform.git
+cd NoviLearn
 pnpm install
+```
 
-# Set up environment variables
+### 2. Configure Environment
+
+Copy the example environment configuration:
+
+```bash
 cp .env.example .env
-# Edit .env with your configuration
+```
 
-# Generate Prisma client
+Set your database credentials and preferred AI provider in `.env`:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/novilearn?schema=public"
+AI_PROVIDER="gemini"
+GEMINI_API_KEY="your-gemini-api-key"
+```
+
+> **Note:** If no AI key is specified, NoviLearn automatically activates its **built-in offline educational engine**, allowing you to test and develop with zero cloud costs!
+
+### 3. Initialize Database
+
+```bash
+# Generate Prisma Client
 pnpm db:generate
 
-# Push database schema
+# Push schema migrations to PostgreSQL
 pnpm db:push
 ```
 
-### Development
+### 4. Run Development Servers
 
 ```bash
-# Start all services
+# Start Web and API concurrently:
 pnpm dev:all
 
-# Or start individually:
-pnpm dev        # API (port 3001)
-pnpm dev:web    # Web (port 3000)
-pnpm dev:mobile # Mobile (Expo)
+# Services will be available at:
+# Web Client:  http://localhost:3000
+# Backend API: http://localhost:3001/api/v1/health
 ```
 
-### Commands
+---
 
-| Command            | Description               |
-| ------------------ | ------------------------- |
-| `pnpm install`     | Install all dependencies  |
-| `pnpm dev`         | Start API server          |
-| `pnpm dev:web`     | Start web dev server      |
-| `pnpm dev:mobile`  | Start Expo dev server     |
-| `pnpm dev:all`     | Start all dev servers     |
-| `pnpm build`       | Build all apps            |
-| `pnpm lint`        | Lint all packages         |
-| `pnpm lint:fix`    | Fix lint issues           |
-| `pnpm format`      | Format code with Prettier |
-| `pnpm db:generate` | Generate Prisma client    |
-| `pnpm db:push`     | Push schema to database   |
-| `pnpm db:studio`   | Open Prisma Studio        |
+## 🐳 Docker Deployment
 
-## Design System
+To spin up NoviLearn and PostgreSQL using Docker:
 
-A shared design system powers both the web and mobile apps:
+```bash
+docker compose up -d
+```
 
-- **Design tokens**: `@novilearn/design-tokens` package (colors, spacing, typography, shadows, component sizes, breakpoints, z-index, transitions)
-- **Web components**: Radix UI + shadcn/ui patterns in `apps/web/src/components/ui/` (Button, Input, Card, Dialog, Select, Tabs, Accordion, Toast, DropdownMenu, Avatar, Tooltip, badges, alerts, progress, states, navigation, etc.)
-- **Mobile components**: React Native primitives in `apps/mobile/src/components/ui/` (Button, Input, Card, Modal, Badge, Progress, Skeleton, states, layout containers, etc.)
-- **Showcase**: Browse web components at `http://localhost:3000/design-system`; the mobile home screen renders the mobile showcase
+The database container will start on port `5432`, and the backend and frontend services will link automatically.
 
-## Architecture
+---
 
-See [docs/architecture.md](docs/architecture.md) for detailed architecture documentation.
+## 🤖 Configuring AI Providers
 
-## Development Guide
+NoviLearn's provider registry (`apps/api/src/ai/providers/`) makes adding or switching models effortless:
 
-See [docs/development-guide.md](docs/development-guide.md) for development workflows and conventions.
+| Provider                      | Environment Variables                              | Supported Models                      |
+| ----------------------------- | -------------------------------------------------- | ------------------------------------- |
+| **Google Gemini** _(Default)_ | `AI_PROVIDER=gemini`<br>`GEMINI_API_KEY=...`       | `gemini-1.5-flash`, `gemini-1.5-pro`  |
+| **OpenAI**                    | `AI_PROVIDER=openai`<br>`OPENAI_API_KEY=...`       | `gpt-4o`, `gpt-4o-mini`               |
+| **Anthropic**                 | `AI_PROVIDER=anthropic`<br>`ANTHROPIC_API_KEY=...` | `claude-3-5-sonnet`                   |
+| **Offline Fallback**          | `AI_PROVIDER=offline`                              | Built-in heuristic pedagogical engine |
 
-## Project Structure
+---
 
-See [docs/project-structure.md](docs/project-structure.md) for detailed project structure.
+## 🛠️ Developer Scripts
 
-## Tech Stack
+| Command             | Description                                   |
+| ------------------- | --------------------------------------------- |
+| `pnpm dev:all`      | Runs API (:3001) and Web (:3000) concurrently |
+| `pnpm dev`          | Starts Express API development server         |
+| `pnpm dev:web`      | Starts Next.js web application                |
+| `pnpm dev:mobile`   | Starts Expo React Native bundler              |
+| `pnpm build`        | Builds all applications and packages          |
+| `pnpm lint`         | Runs ESLint across all workspaces             |
+| `pnpm format`       | Formats the codebase using Prettier           |
+| `pnpm format:check` | Verifies code formatting compliance in CI     |
+| `pnpm db:generate`  | Regenerates Prisma Client                     |
+| `pnpm db:push`      | Synchronizes Prisma schema with database      |
+| `pnpm db:studio`    | Launches visual Prisma Studio interface       |
 
-### Web
+---
 
-- Next.js 15 (App Router)
-- React 18
-- JavaScript (JSX)
-- Tailwind CSS 3
-- shadcn/ui (Radix UI primitives)
-- TanStack Query 5
-- Zustand 5
-- React Hook Form 7 + Zod
+## 🧪 Testing & Code Quality
 
-### Mobile
+NoviLearn maintains strict quality standards backed by automated CI:
 
-- Expo 52
-- React Native 0.76
-- NativeWind 4 (Tailwind for React Native)
-- React Native Paper 5
-- Expo Router 4
-- TanStack Query 5
-- Zustand 5
-- React Hook Form 7 + Zod
+```bash
+# Run linting
+pnpm run lint
 
-### API
+# Check code formatting
+pnpm run format:check
 
-- Express 4
-- JavaScript (Node.js ESM, no build step)
-- Prisma ORM 5
-- PostgreSQL
-- Zod validation
+# Run automated tests
+pnpm run test
+```
 
-### Shared
+All pull requests trigger automated GitHub Actions checking linting, formatting, type definitions, and test suites across multiple Node.js environments.
 
-- JavaScript (ESM)
-- Zod 3
-- Shared types & validation
+---
 
-## License
+## 🗺️ Roadmap & Future Horizons
 
-MIT
+See our full [ROADMAP.md](ROADMAP.md) for details on upcoming features:
+
+- **Phase 3**: Socratic Questioning Mode & Multi-Modal Document RAG (PDF/Textbook ingestion).
+- **Phase 4**: Spaced Repetition (FSRS/SM-2) Flashcard scheduling & Knowledge Graph.
+- **Phase 5**: 1-Click Cloud Run / Railway deploy & local model support (Ollama / vLLM).
+
+---
+
+## 🤝 Contributing
+
+We warmly welcome contributions from the community! Whether you are fixing a typo, adding a new AI provider, or creating UI components:
+
+1. Read our [Contributing Guide](CONTRIBUTING.md).
+2. Follow our [Code of Conduct](CODE_OF_CONDUCT.md).
+3. Check open issues labeled `good first issue` or `help wanted`.
+
+---
+
+## 🔒 Security
+
+For responsible vulnerability reporting, please review our [Security Policy](SECURITY.md).
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.

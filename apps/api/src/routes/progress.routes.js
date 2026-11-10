@@ -5,6 +5,7 @@ import {
   practiceHistoryController,
   practiceHistoryDetailController,
   progressSummaryController,
+  streakController,
   suggestionsController,
   topicProgressController,
 } from "../controllers/progress.controller.js";
@@ -41,6 +42,7 @@ progressRouter.get(
   PROGRESS_LIMITER,
   practiceHistoryDetailController,
 );
+progressRouter.get("/streak", authenticate, PROGRESS_LIMITER, streakController);
 progressRouter.get(
   "/topics",
   authenticate,

@@ -62,3 +62,4 @@ nativewind-env.d.ts
 *.pem
 .vercel
 .netlify
+scratch/

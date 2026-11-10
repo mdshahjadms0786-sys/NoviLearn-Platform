@@ -1,4 +1,13 @@
-import { BookOpen, CircleUser, Dumbbell, Home, TrendingUp } from "lucide-react";
+import {
+  BookOpen,
+  BookmarkCheck,
+  Bot,
+  CircleUser,
+  Dumbbell,
+  Home,
+  TrendingUp,
+} from "lucide-react";
+
 export const APP_NAV_ITEMS = [
   {
     href: "/home",
@@ -20,12 +29,24 @@ export const APP_NAV_ITEMS = [
     label: "Progress",
     icon: TrendingUp,
   },
+  {
+    href: "/ai-teacher",
+    label: "AI Teacher",
+    icon: Bot,
+  },
+  {
+    href: "/my-learning",
+    label: "My Learning",
+    icon: BookmarkCheck,
+  },
 ];
+
 export const PROFILE_NAV_ITEM = {
   href: "/account",
   label: "Profile",
   icon: CircleUser,
 };
+
 export function isActivePath(pathname, href) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }

@@ -2,11 +2,12 @@ import { AppError } from "../errors.js";
 import { prisma } from "../prisma.js";
 import { computeMastery, computeTopicProgress } from "./calculations.js";
 import { buildSuggestions } from "./personalization.js";
+import { getLearningStreak } from "./streak.js";
 import { upsertTopic } from "./topics.js";
 import { normalizeTopic } from "../utils/topic.js";
 const RECENT_ACTIVITY_LIMIT = 10;
 const RELATED_NEXT_LIST_LIMIT = 6;
-export { normalizeTopic };
+export { normalizeTopic, getLearningStreak };
 function sanitizeStringList(value, limit) {
   if (!Array.isArray(value)) {
     return [];

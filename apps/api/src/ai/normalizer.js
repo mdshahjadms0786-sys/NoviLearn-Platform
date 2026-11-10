@@ -33,6 +33,7 @@ const visualRepresentationSchema = z.object({
 const providerResponseSchema = z.object({
   summary: z.string().optional(),
   explanation: z.string().optional(),
+  modes: z.record(z.any()).optional(),
   keyPoints: z.array(z.string()).optional(),
   example: z.string().optional(),
   analogy: z.string().optional(),
@@ -184,6 +185,7 @@ export function normalizeProviderResponse(question, rawContent) {
   return {
     question: question.trim(),
     sections,
+    ...(raw.modes ? { modes: raw.modes } : {}),
     ...(relatedConcepts.length > 0
       ? {
           relatedConcepts,

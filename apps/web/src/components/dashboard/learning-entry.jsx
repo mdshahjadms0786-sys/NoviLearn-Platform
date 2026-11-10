@@ -13,9 +13,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+
+const SUGGESTED_TOPICS = [
+  "Photosynthesis",
+  "Newton's Laws",
+  "Python Functions",
+  "DNA Replication",
+  "Ohm's Law",
+];
+
 export function LearningEntry() {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
+
   const handleSubmit = (event) => {
     event.preventDefault();
     const question = query.trim();
@@ -23,6 +33,11 @@ export function LearningEntry() {
       router.push(`/learn?q=${encodeURIComponent(question)}`);
     }
   };
+
+  const handleSelectTopic = (topic) => {
+    router.push(`/learn?q=${encodeURIComponent(topic)}`);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -33,7 +48,7 @@ export function LearningEntry() {
           Ask NoviLearn for a topic and get a structured explanation.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         <form
           onSubmit={handleSubmit}
           className="flex flex-col gap-3 sm:flex-row"
@@ -54,6 +69,22 @@ export function LearningEntry() {
             Ask NoviLearn
           </Button>
         </form>
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <span className="text-xs font-medium text-muted-foreground">
+            Try asking:
+          </span>
+          {SUGGESTED_TOPICS.map((topic) => (
+            <button
+              key={topic}
+              type="button"
+              onClick={() => handleSelectTopic(topic)}
+              className="rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+            >
+              {topic}
+            </button>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

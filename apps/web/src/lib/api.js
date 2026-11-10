@@ -124,4 +124,8 @@ export const progressApi = {
     apiClient("/progress/suggestions", {
       token,
     }),
+  streak: (token) =>
+    apiClient("/progress/streak", {
+      token,
+    }),
 };

@@ -11,6 +11,7 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react", "@radix-ui/react-slot"],
   },
+  devIndicators: false,
 };
 
 module.exports = nextConfig;

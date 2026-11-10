@@ -14,6 +14,25 @@ import { upsertTopic } from "../progress/topics.js";
 import { normalizeTopic } from "../utils/topic.js";
 const PRACTICE_MAX_TOKENS = 2500;
 export async function generatePracticeSet(userId, config) {
+  if (config && config.adaptive) {
+    const normTopic = normalizeTopic(config.topic);
+    const pastSessions = await prisma.practiceSession.findMany({
+      where: { userId, topic: normTopic },
+      select: { accuracy: true },
+    });
+    if (pastSessions.length > 0) {
+      const avgAccuracy = Math.round(
+        pastSessions.reduce((acc, s) => acc + s.accuracy, 0) /
+          pastSessions.length,
+      );
+      if (avgAccuracy < 60) {
+        config.difficulty = "beginner";
+      } else if (avgAccuracy > 85) {
+        config.difficulty = "advanced";
+      }
+    }
+  }
+
   const raw = await completeProviderRequest({
     messages: buildPracticeMessages(config),
     maxTokens: PRACTICE_MAX_TOKENS,

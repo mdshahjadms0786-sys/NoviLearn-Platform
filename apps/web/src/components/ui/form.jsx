@@ -23,7 +23,27 @@ export function FormField({
   placeholder,
   type,
   autoComplete,
+  render,
 }) {
+  if (typeof render === "function") {
+    return (
+      <Controller
+        name={name}
+        control={control}
+        {...(rules
+          ? {
+              rules,
+            }
+          : {})}
+        {...(defaultValue !== undefined
+          ? {
+              defaultValue,
+            }
+          : {})}
+        render={render}
+      />
+    );
+  }
   return (
     <Controller
       name={name}

@@ -1,33 +1,36 @@
-import Link from "next/link";
+"use client";
 
-import { AuthLinks } from "@/components/auth/auth-links";
-import { AuthenticatedRedirect } from "@/components/auth/authenticated-redirect";
-import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import * as React from "react";
+
+import { LandingCta } from "@/components/landing/landing-cta";
+import { LandingFeatures } from "@/components/landing/landing-features";
+import { LandingFooter } from "@/components/landing/landing-footer";
+import { LandingHero } from "@/components/landing/landing-hero";
+import { LandingHowItWorks } from "@/components/landing/landing-how-it-works";
+import { LandingNav } from "@/components/landing/landing-nav";
+import { useAuth } from "@/lib/use-auth";
+
 export default function HomePage() {
+  const router = useRouter();
+  const { status } = useAuth();
+
+  React.useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/home");
+    }
+  }, [router, status]);
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <AuthenticatedRedirect />
-      <div className="mt-16 flex flex-col items-center gap-4">
-        <h1 className="text-4xl font-bold tracking-tight text-center sm:text-6xl">
-          NoviLearn
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl text-center">
-          AI-powered learning platform for students
-        </p>
-        <div className="flex flex-wrap justify-center gap-3">
-          <AuthLinks />
-          <Button asChild>
-            <a
-              href={`${(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(/\/+$/, "")}/health`}
-            >
-              Check API Health
-            </a>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/design-system">Design System</Link>
-          </Button>
-        </div>
-      </div>
-    </main>
+    <>
+      <LandingNav />
+      <main className="min-h-screen">
+        <LandingHero />
+        <LandingFeatures />
+        <LandingHowItWorks />
+        <LandingCta />
+      </main>
+      <LandingFooter />
+    </>
   );
 }
