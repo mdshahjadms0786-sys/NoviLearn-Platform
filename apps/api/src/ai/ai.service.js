@@ -1,10 +1,10 @@
 import { config } from "../config.js";
+import { logger } from "../logger.js";
+import { generateEducationalResponse } from "./educational-engine.js";
 import { normalizeProviderResponse } from "./normalizer.js";
 import { buildGrounding } from "../rag/rag.service.js";
 import { buildTutorMessages } from "./prompts/system.js";
 import { createProvider } from "./providers/index.js";
-import { generateEducationalResponse } from "./educational-engine.js";
-import { logger } from "../logger.js";
 
 const DEFAULT_MAX_TOKENS = 700;
 const DEFAULT_TEMPERATURE = 0.4;

@@ -16,11 +16,11 @@ import {
 import { prisma } from "./prisma.js";
 import { aiRouter } from "./routes/ai.routes.js";
 import { authRouter } from "./routes/auth.routes.js";
-import { practiceRouter } from "./routes/practice.routes.js";
-import { progressRouter } from "./routes/progress.routes.js";
 import { learningRouter } from "./routes/learning.routes.js";
 import { mediaRouter } from "./routes/media.routes.js";
+import { practiceRouter } from "./routes/practice.routes.js";
 import { preferencesRouter } from "./routes/preferences.routes.js";
+import { progressRouter } from "./routes/progress.routes.js";
 function isDuplicateEmailError(err) {
   return (
     typeof err === "object" &&

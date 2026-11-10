@@ -604,7 +604,7 @@ const TOPIC_REGISTRY = {
   },
 };
 
-export function generateEducationalResponse(question, preferences = "") {
+export function generateEducationalResponse(question, _preferences = "") {
   const qLower = question.toLowerCase();
   const topicName = cleanTopic(question);
   const mode = detectMode(question);

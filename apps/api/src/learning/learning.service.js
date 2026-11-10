@@ -187,7 +187,7 @@ export async function sendMessage(
   const raw = await completeProviderRequest({ messages: tutorMessages });
   const response = normalizeProviderResponse(session.topic, raw);
 
-  const assistantMessage = await prisma.learningMessage.create({
+  await prisma.learningMessage.create({
     data: {
       sessionId,
       role: "assistant",
